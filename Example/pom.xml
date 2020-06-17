@@ -1,15 +1,21 @@
 <project>
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.ofs</groupId>
-    <artifactId>parent</artifactId>
-    <version>0.1</version>
-    <packaging>pom</packaging>
+    <parent>
+        <groupId>com.ofs</groupId>
+        <artifactId>parent</artifactId>
+        <version>0.1</version>
+    </parent>
+    <artifactId>example</artifactId>
 
-    <modules>
-        <module>example</module>
-        <module>filesystem</module>
-    </modules>
+    <dependencies>
+        <dependency>
+            <groupId>com.ofs</groupId>
+            <artifactId>filesystem</artifactId>
+            <version>0.1</version>
+            <scope>runtime</scope>
+        </dependency>
+    </dependencies>
 
     <build>
         <plugins>
