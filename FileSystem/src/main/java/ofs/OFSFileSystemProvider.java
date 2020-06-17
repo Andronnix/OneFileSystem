@@ -1,5 +1,6 @@
 package ofs;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.channels.SeekableByteChannel;
@@ -12,6 +13,8 @@ import java.util.Map;
 import java.util.Set;
 
 public class OFSFileSystemProvider extends FileSystemProvider {
+    private OFSFileSystem fileSystem;
+
     @Override
     public String getScheme() {
         return "ofs";
@@ -19,12 +22,21 @@ public class OFSFileSystemProvider extends FileSystemProvider {
 
     @Override
     public FileSystem newFileSystem(URI uri, Map<String, ?> env) throws IOException {
-        return null;
+        if(fileSystem != null) {
+            throw new FileSystemAlreadyExistsException("There can be only one OFS");
+        }
+
+        fileSystem = new OFSFileSystem(File.createTempFile("ofs", "sfo"), this);
+
+        return fileSystem;
     }
 
     @Override
     public FileSystem getFileSystem(URI uri) {
-        return null;
+        if(fileSystem == null)
+            throw new FileSystemNotFoundException("The OFS was never created.");
+
+        return fileSystem;
     }
 
     @Override
