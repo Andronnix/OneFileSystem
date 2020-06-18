@@ -48,7 +48,13 @@ public class OFSPath implements Path {
 
     @Override
     public Path getParent() {
-        return null;
+        if(!isAbsolute() && path.size() <= 1)
+            return null;
+
+        if(isAbsolute() && path.size() == 0)
+            return null;
+
+        return new OFSPath(path.subList(0, path.size() - 1), fs, isAbsolute);
     }
 
     @Override

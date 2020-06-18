@@ -163,7 +163,7 @@ public class OFSPathTest {
 
     @Test
     public void checksRelativeForWrongPrefix() {
-        var path1 = Path.of(URI.create("ofs:]=$a$b$z")).subpath(1, 2);
+        var path1 = Path.of(URI.create("ofs:]=$a$b$z")).subpath(1, 3);
         var path2 = Path.of(URI.create("ofs:]=$a$b$c$d$e")).subpath(1, 4);
 
         Assert.assertFalse(path2.startsWith(path1));
@@ -268,5 +268,27 @@ public class OFSPathTest {
         var subpath = path.subpath(2, 4);
 
         Assert.assertEquals("c$d", subpath.toString());
+    }
+
+    @Test
+    public void constructsParent() {
+        var path = Path.of(URI.create("ofs:]=$a$b$c$d$e"));
+        var expected = Path.of(URI.create("ofs:]=$a$b$c$d"));
+
+        Assert.assertEquals(expected, path.getParent());
+    }
+
+    @Test
+    public void constructsNullParentOfEmptyPath() {
+        var path = Path.of(URI.create("ofs:]=$"));
+
+        Assert.assertNull(path.getParent());
+    }
+
+    @Test
+    public void constructsNullParentOfEmptyRelativePath() {
+        var path = new OFSPath(List.of(), (OFSFileSystem) FileSystems.getFileSystem(URI.create("ofs:]=$")), false);
+
+        Assert.assertNull(path.getParent());
     }
 }
