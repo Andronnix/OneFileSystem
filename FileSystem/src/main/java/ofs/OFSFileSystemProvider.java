@@ -1,5 +1,7 @@
 package ofs;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -9,11 +11,11 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.spi.FileSystemProvider;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class OFSFileSystemProvider extends FileSystemProvider {
     private OFSFileSystem fileSystem;
+    static final String ROOT = "]=";
 
     @Override
     public String getScheme() {
@@ -24,6 +26,12 @@ public class OFSFileSystemProvider extends FileSystemProvider {
     public FileSystem newFileSystem(URI uri, Map<String, ?> env) throws IOException {
         if(fileSystem != null) {
             throw new FileSystemAlreadyExistsException("There can be only one OFS");
+        }
+
+        if(!uri.getScheme().equals(getScheme())) {
+            throw new IllegalArgumentException(
+                    String.format("Wrong uri scheme. Expected %s, got %s", getScheme(), uri.getScheme())
+            );
         }
 
         fileSystem = new OFSFileSystem(File.createTempFile("ofs", "sfo"), this);
@@ -39,9 +47,34 @@ public class OFSFileSystemProvider extends FileSystemProvider {
         return fileSystem;
     }
 
+    @NotNull
     @Override
     public Path getPath(URI uri) {
-        return null;
+        if(!uri.getScheme().equals(getScheme())) {
+            throw new IllegalArgumentException(
+                    String.format("Expected %s scheme, found %s", getScheme(), uri.getScheme())
+            );
+        }
+
+        if(fileSystem == null) {
+            throw new FileSystemNotFoundException();
+        }
+
+        StringTokenizer st = new StringTokenizer(uri.getSchemeSpecificPart(), OFSFileSystem.SEPARATOR);
+        List<String> path = new ArrayList<>();
+
+        while(st.hasMoreTokens()) {
+            var token = st.nextToken();
+            path.add(token);
+        }
+
+        boolean isAbsolutePath = false;
+        if(path.size() > 0 && path.get(0).equals(ROOT)) {
+            path = path.subList(1, path.size());
+            isAbsolutePath = true;
+        }
+
+        return new OFSPath(path, fileSystem, isAbsolutePath);
     }
 
     @Override

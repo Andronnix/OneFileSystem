@@ -8,6 +8,8 @@ import java.nio.file.spi.FileSystemProvider;
 import java.util.Set;
 
 public class OFSFileSystem extends FileSystem {
+    static final String SEPARATOR = "$";
+
     private File baseFile;
     private OFSFileSystemProvider provider;
 
@@ -46,7 +48,7 @@ public class OFSFileSystem extends FileSystem {
 
     @Override
     public String getSeparator() {
-        return "->";
+        return SEPARATOR;
     }
 
     @Override
