@@ -68,8 +68,7 @@ public class OFSPathTest {
         var relative = path2.relativize(path1);
 
         Assert.assertFalse(relative.isAbsolute());
-        Assert.assertEquals("d", relative.getName(0).toString());
-        Assert.assertEquals("e", relative.getName(1).toString());
+        Assert.assertEquals("d$e", relative.toString());
     }
 
     @Test
@@ -116,8 +115,7 @@ public class OFSPathTest {
         var path = Path.of(URI.create("ofs:]=$a$b$c$d"));
         var subpath = path.subpath(1, 3);
 
-        Assert.assertEquals("b", subpath.getName(0).toString());
-        Assert.assertEquals("c", subpath.getName(1).toString());
+        Assert.assertEquals("b$c", subpath.toString());
     }
 
     @Test
@@ -134,8 +132,7 @@ public class OFSPathTest {
         var abs = subpath.toAbsolutePath();
 
         Assert.assertTrue(abs.isAbsolute());
-        Assert.assertEquals("b", abs.getName(0).toString());
-        Assert.assertEquals("c", abs.getName(1).toString());
+        Assert.assertEquals("]=$b$c", abs.toString());
     }
 
     @Test

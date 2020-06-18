@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.*;
 import java.util.List;
+import java.util.Objects;
 
 public class OFSPath implements Path {
     private final List<String> path;
@@ -70,7 +71,7 @@ public class OFSPath implements Path {
         if(beginIndex < 0 || beginIndex >= path.size())
             throw new IllegalArgumentException("Wrong beginIndex");
 
-        if(endIndex <= beginIndex || endIndex >= path.size())
+        if(endIndex <= beginIndex || endIndex > path.size())
             throw new IllegalArgumentException("Wrong endIndex");
 
         return new OFSPath(path.subList(beginIndex, endIndex), fs, false);
@@ -126,7 +127,9 @@ public class OFSPath implements Path {
     @NotNull
     @Override
     public Path toAbsolutePath() {
-        return null;
+        if(isAbsolute()) return this;
+
+        return new OFSPath(path, fs, true);
     }
 
     @NotNull
@@ -143,5 +146,37 @@ public class OFSPath implements Path {
     @Override
     public int compareTo(Path other) {
         return 0;
+    }
+
+    @Override
+    public String toString() {
+        var p = String.join(OFSFileSystem.SEPARATOR, path);
+        if(isAbsolute())
+            p = OFSFileSystemProvider.ROOT + "$" + p;
+
+        return p;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        OFSPath path = (OFSPath) o;
+        if(isAbsolute != path.isAbsolute) return false;
+        if(!Objects.equals(fs, path.fs)) return false;
+        if(path.getNameCount() != getNameCount()) return false;
+
+        for(int i = 0; i < getNameCount(); i++) {
+            if(!this.path.get(i).equals(path.path.get(i)))
+                return false;
+        }
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(path.size(), fs, isAbsolute);
     }
 }
