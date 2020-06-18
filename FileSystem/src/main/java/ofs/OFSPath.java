@@ -5,6 +5,7 @@ import org.jetbrains.annotations.NotNull;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.*;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -106,36 +107,53 @@ public class OFSPath implements Path {
 
     @Override
     public boolean endsWith(@NotNull Path other) {
-        return false;
+        throw new UnsupportedOperationException("Not implemented");
     }
 
     @Override
     public Path normalize() {
-        return null;
+        return this;
     }
 
     @NotNull
     @Override
     public Path resolve(@NotNull Path other) {
+        if(!(other instanceof OFSPath))
+            throw new IllegalArgumentException();
+
         if(other.isAbsolute())
             return other;
 
         if(other.getNameCount() == 0)
             return this;
 
-        return null;
+        var resultList = new ArrayList<>(this.path);
+        resultList.addAll(((OFSPath) other).path);
+
+        return new OFSPath(resultList, fs, isAbsolute);
     }
 
     @NotNull
     @Override
     public Path relativize(@NotNull Path other) {
-        return null;
+        if(!(other instanceof OFSPath) || !other.startsWith(this))
+            throw new IllegalArgumentException();
+
+        var ofs = (OFSPath) other;
+
+        return new OFSPath(ofs.path.subList(path.size(), ofs.path.size()), fs, false);
     }
 
     @NotNull
     @Override
     public URI toUri() {
-        return null;
+        if(!isAbsolute())
+            return this.toAbsolutePath().toUri();
+
+        String uri = OFSFileSystemProvider.SCHEME + ":" + OFSFileSystemProvider.ROOT
+                + String.join(OFSFileSystem.SEPARATOR, path);
+
+        return URI.create(uri);
     }
 
     @NotNull

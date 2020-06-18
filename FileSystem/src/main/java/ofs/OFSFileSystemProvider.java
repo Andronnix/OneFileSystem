@@ -16,10 +16,11 @@ import java.util.*;
 public class OFSFileSystemProvider extends FileSystemProvider {
     private OFSFileSystem fileSystem;
     static final String ROOT = "]=";
+    static final String SCHEME = "ofs";
 
     @Override
     public String getScheme() {
-        return "ofs";
+        return SCHEME;
     }
 
     @Override

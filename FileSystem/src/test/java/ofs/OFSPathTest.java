@@ -96,7 +96,7 @@ public class OFSPathTest {
         var path1 = Path.of(URI.create("ofs:]=$a$b$c"));
         var path2 = Path.of(URI.create("ofs:]=$a$b$c$d$e"));
 
-        var relative = path2.relativize(path1);
+        var relative = path1.relativize(path2);
 
         Assert.assertFalse(relative.isAbsolute());
         Assert.assertEquals("d$e", relative.toString());
