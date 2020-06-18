@@ -79,15 +79,23 @@ public class OFSPath implements Path {
 
     @Override
     public boolean startsWith(@NotNull Path other) {
-        if(other.getFileSystem() != fs)
+        if(other.getFileSystem() != fs || !(other instanceof OFSPath))
             return false;
 
-        if(other.getNameCount() > path.size())
+        if(other.isAbsolute() && !this.isAbsolute)
             return false;
+
+        var ofsOther = (OFSPath) other;
+
+        if(ofsOther.getNameCount() > path.size())
+            return false;
+
         for(int i = 0; i < other.getNameCount(); i++) {
-
+            if(!ofsOther.path.get(i).equals(path.get(i)))
+                return false;
         }
-        return false;
+
+        return true;
     }
 
     @Override

@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 
 public class OFSPathTest {
@@ -42,6 +43,36 @@ public class OFSPathTest {
         var path2 = Path.of(URI.create("ofs:]=$a$b$c$d$"));
 
         Assert.assertTrue(path1.getNameCount() == path2.getNameCount());
+    }
+
+    @Test
+    public void constructsSubpath() {
+        var path = Path.of(URI.create("ofs:]=$a$b$c$d"));
+
+        var expected = new OFSPath(List.of("b", "c", "d"), (OFSFileSystem) path.getFileSystem(), false);
+
+        Assert.assertEquals(expected, path.subpath(1, 4));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void doesntConstructsTooLongSubpath() {
+        var path = Path.of(URI.create("ofs:]=$a$b$c$d"));
+
+        path.subpath(1, 10);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void doesntAcceptWrongRightSubpathBound() {
+        var path = Path.of(URI.create("ofs:]=$a$b$c$d"));
+
+        path.subpath(2, 2);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void doesntAcceptNegativesSubpathBound() {
+        var path = Path.of(URI.create("ofs:]=$a$b$c$d"));
+
+        path.subpath(-1, 1);
     }
 
     @Test
@@ -113,10 +144,11 @@ public class OFSPathTest {
     @Test
     public void checksRelativeForPrefix() {
         var path = Path.of(URI.create("ofs:]=$a$b$c$d$e"));
-
         var subpath = path.subpath(1, 4);
 
-        Assert.assertTrue(subpath.startsWith("b$c"));
+        var prefix = new OFSPath(List.of("b", "c"), (OFSFileSystem) path.getFileSystem(), false);
+
+        Assert.assertTrue(subpath.startsWith(prefix));
     }
 
     @Test
@@ -126,7 +158,7 @@ public class OFSPathTest {
 
         var subpath = path2.subpath(0, 3);
 
-        Assert.assertFalse(path2.startsWith(path));
+        Assert.assertFalse(subpath.startsWith(path));
     }
 
     @Test
