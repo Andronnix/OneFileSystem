@@ -60,7 +60,7 @@ public class OFSPathTest {
         }
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void constructsChildRelativePaths() {
         var path1 = Path.of(URI.create("ofs:]=$a$b$c"));
         var path2 = Path.of(URI.create("ofs:]=$a$b$c$d$e"));
@@ -69,6 +69,79 @@ public class OFSPathTest {
 
         Assert.assertFalse(relative.isAbsolute());
         Assert.assertEquals("d$e", relative.toString());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void doesntConstructNonChildRelativePaths() {
+        var path1 = Path.of(URI.create("ofs:]=$a$b$c"));
+        var path2 = Path.of(URI.create("ofs:]=$a$b$Z$d$e"));
+
+        path2.relativize(path1);
+    }
+
+    @Test
+    public void checksForEmptyPrefix() {
+        var path1 = Path.of(URI.create("ofs:]=$"));
+        var path2 = Path.of(URI.create("ofs:]=$a$b$c$d$e"));
+
+        Assert.assertTrue(path2.startsWith(path1));
+    }
+
+    @Test
+    public void checksForPrefix() {
+        var path1 = Path.of(URI.create("ofs:]=$a$b$c"));
+        var path2 = Path.of(URI.create("ofs:]=$a$b$c$d$e"));
+
+        Assert.assertTrue(path2.startsWith(path1));
+    }
+
+    @Test
+    public void checksForWrongPrefix() {
+        var path1 = Path.of(URI.create("ofs:]=$a$b$z"));
+        var path2 = Path.of(URI.create("ofs:]=$a$b$c$d$e"));
+
+        Assert.assertFalse(path2.startsWith(path1));
+    }
+
+    @Test
+    public void parentIsPrefix() {
+        var path = Path.of(URI.create("ofs:]=$a$b$c$d$e"));
+
+        Assert.assertTrue(path.startsWith(path.getParent()));
+    }
+
+    @Test
+    public void checksRelativeForPrefix() {
+        var path = Path.of(URI.create("ofs:]=$a$b$c$d$e"));
+
+        var subpath = path.subpath(1, 4);
+
+        Assert.assertTrue(subpath.startsWith("b$c"));
+    }
+
+    @Test
+    public void checksRelativeDoesntHaveAbsolutePrefix() {
+        var path = Path.of(URI.create("ofs:]=$a$b"));
+        var path2 = Path.of(URI.create("ofs:]=$a$b$c$d$e"));
+
+        var subpath = path2.subpath(0, 3);
+
+        Assert.assertFalse(path2.startsWith(path));
+    }
+
+    @Test
+    public void checksRelativeForWrongPrefix() {
+        var path1 = Path.of(URI.create("ofs:]=$a$b$z")).subpath(1, 2);
+        var path2 = Path.of(URI.create("ofs:]=$a$b$c$d$e")).subpath(1, 4);
+
+        Assert.assertFalse(path2.startsWith(path1));
+    }
+
+    @Test
+    public void parentOfRelativeIsPrefix() {
+        var path = Path.of(URI.create("ofs:]=$a$b$c$d$e")).subpath(1, 5);
+
+        Assert.assertTrue(path.startsWith(path.getParent()));
     }
 
     @Test
