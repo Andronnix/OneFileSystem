@@ -25,7 +25,7 @@ public class BlockFileController implements OFSController {
         var strPath = path.toString();
 
         if(!files.containsKey(strPath)) {
-            var head = new BlockFileHead(false);
+            var head = new BlockFileHead(path.getFileName().toString(), false);
             files.put(strPath, head);
         }
 
@@ -49,7 +49,7 @@ public class BlockFileController implements OFSController {
             throw new FileAlreadyExistsException(dirStr);
         }
 
-        var head = new BlockFileHead(true);
+        var head = new BlockFileHead(dir.getFileName().toString(), true);
         files.put(dirStr, head);
     }
 
