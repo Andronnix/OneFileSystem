@@ -1,8 +1,8 @@
 package ofs;
 
+import ofs.controller.OFSController;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.channels.SeekableByteChannel;
@@ -15,7 +15,7 @@ import java.util.*;
 
 public class OFSFileSystemProvider extends FileSystemProvider {
     private OFSFileSystem fileSystem;
-    private File baseFile;
+    private OFSController controller;
 
     static final String ROOT = "]=";
     static final String SCHEME = "ofs";
@@ -37,7 +37,6 @@ public class OFSFileSystemProvider extends FileSystemProvider {
             );
         }
 
-        baseFile = File.createTempFile("ofs", "sfo");
         fileSystem = new OFSFileSystem(this);
 
         return fileSystem;
@@ -69,37 +68,55 @@ public class OFSFileSystemProvider extends FileSystemProvider {
 
     @Override
     public SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
-        return null;
+        if(!(path instanceof OFSPath))
+            throw new IllegalArgumentException();
+
+        return controller.newByteChannel((OFSPath) path, options, attrs);
     }
 
     @Override
     public DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) throws IOException {
-        return null;
+        if(!(dir instanceof OFSPath))
+            throw new IllegalArgumentException();
+
+        return controller.newDirectoryStream((OFSPath) dir, filter);
     }
 
     @Override
     public void createDirectory(Path dir, FileAttribute<?>... attrs) throws IOException {
+        if(!(dir instanceof OFSPath))
+            throw new IllegalArgumentException();
 
+        controller.createDirectory((OFSPath) dir, attrs);
     }
 
     @Override
     public void delete(Path path) throws IOException {
+        if(!(path instanceof OFSPath))
+            throw new IllegalArgumentException();
 
+        controller.delete((OFSPath) path);
     }
 
     @Override
     public void copy(Path source, Path target, CopyOption... options) throws IOException {
+        if(!(source instanceof OFSPath && target instanceof OFSPath))
+            throw new IllegalArgumentException();
 
+        controller.copy((OFSPath) source, (OFSPath) target, options);
     }
 
     @Override
     public void move(Path source, Path target, CopyOption... options) throws IOException {
+        if(!(source instanceof OFSPath && target instanceof OFSPath))
+            throw new IllegalArgumentException();
 
+        controller.move((OFSPath) source, (OFSPath) target, options);
     }
 
     @Override
     public boolean isSameFile(Path path, Path path2) throws IOException {
-        return false;
+        return path.equals(path2);
     }
 
     @Override
@@ -114,26 +131,42 @@ public class OFSFileSystemProvider extends FileSystemProvider {
 
     @Override
     public void checkAccess(Path path, AccessMode... modes) throws IOException {
+        if(!(path instanceof OFSPath))
+            throw new IllegalArgumentException();
 
+        if(!controller.exists((OFSPath) path))
+            throw new UnsupportedOperationException();
     }
 
     @Override
     public <V extends FileAttributeView> V getFileAttributeView(Path path, Class<V> type, LinkOption... options) {
-        return null;
+        if(!(path instanceof OFSPath))
+            throw new IllegalArgumentException();
+
+        return controller.getFileAttributeView((OFSPath) path, type, options);
     }
 
     @Override
     public <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options) throws IOException {
-        return null;
+        if(!(path instanceof OFSPath))
+            throw new IllegalArgumentException();
+
+        return controller.readAttributes((OFSPath) path, type, options);
     }
 
     @Override
     public Map<String, Object> readAttributes(Path path, String attributes, LinkOption... options) throws IOException {
-        return null;
+        if(!(path instanceof OFSPath))
+            throw new IllegalArgumentException();
+
+        return controller.readAttributes((OFSPath) path, attributes, options);
     }
 
     @Override
     public void setAttribute(Path path, String attribute, Object value, LinkOption... options) throws IOException {
+        if(!(path instanceof OFSPath))
+            throw new IllegalArgumentException();
 
+        controller.setAttribute((OFSPath) path, attribute, value, options);
     }
 }
