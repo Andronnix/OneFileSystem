@@ -15,6 +15,8 @@ import java.util.*;
 
 public class OFSFileSystemProvider extends FileSystemProvider {
     private OFSFileSystem fileSystem;
+    private File baseFile;
+
     static final String ROOT = "]=";
     static final String SCHEME = "ofs";
 
@@ -35,7 +37,8 @@ public class OFSFileSystemProvider extends FileSystemProvider {
             );
         }
 
-        fileSystem = new OFSFileSystem(File.createTempFile("ofs", "sfo"), this);
+        baseFile = File.createTempFile("ofs", "sfo");
+        fileSystem = new OFSFileSystem(this);
 
         return fileSystem;
     }

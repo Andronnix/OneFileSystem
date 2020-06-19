@@ -13,20 +13,9 @@ import java.util.Set;
 public class OFSFileSystem extends FileSystem {
     static final String SEPARATOR = "$";
 
-    private File baseFile;
-    private OFSFileSystemProvider provider;
+    private final OFSFileSystemProvider provider;
 
-    OFSFileSystem(File baseFile, OFSFileSystemProvider provider) {
-        if(!baseFile.exists())
-            throw new IllegalArgumentException("Base file doesn't exist.");
-
-        if(!baseFile.isFile())
-            throw new IllegalArgumentException("Base file is not a file.");
-
-        if(!baseFile.canRead() || !baseFile.canWrite())
-            throw new IllegalArgumentException("Base file must be readable and writable.");
-
-        this.baseFile = baseFile;
+    OFSFileSystem(OFSFileSystemProvider provider) {
         this.provider = provider;
     }
 
@@ -37,11 +26,12 @@ public class OFSFileSystem extends FileSystem {
 
     @Override
     public void close() throws IOException {
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public boolean isOpen() {
-        return false;
+        return true;
     }
 
     @Override
