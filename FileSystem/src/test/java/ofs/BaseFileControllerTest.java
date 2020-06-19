@@ -1,6 +1,6 @@
 package ofs;
 
-import ofs.controller.TempFileController;
+import ofs.controller.BaseFileController;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -12,12 +12,12 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.HashSet;
 import java.util.Set;
 
-public class TempFileControllerTest {
-    private TempFileController controller;
+public class BaseFileControllerTest {
+    private BaseFileController controller;
 
     @Before
     public void createController() throws IOException {
-        controller = new TempFileController();
+        controller = new BaseFileController(Files.createTempFile("test", "test"));
     }
 
     @Test
@@ -39,6 +39,48 @@ public class TempFileControllerTest {
 
         var attrs = controller.readAttributes(path, BasicFileAttributes.class);
         Assert.assertFalse(attrs.isDirectory());
+    }
+
+    @Test
+    public void writesToFile() throws IOException {
+        var magicNumber = 12;
+        var file = Path.of("file");
+        var bc = controller.newByteChannel(file, Set.of(StandardOpenOption.CREATE));
+        var outputStream = Channels.newOutputStream(bc);
+        outputStream.write(magicNumber);
+        outputStream.close();
+
+        var copyBc = controller.newByteChannel(file, Set.of(StandardOpenOption.READ));
+        var inputStream = Channels.newInputStream(copyBc);
+
+        Assert.assertEquals(magicNumber, inputStream.read());
+        Assert.assertEquals(0, inputStream.available());
+
+        inputStream.close();
+    }
+
+    @Test
+    public void writesLongFiles() throws IOException {
+        var magicNumber = 7;
+        var file = Path.of("file");
+        var bc = controller.newByteChannel(file, Set.of(StandardOpenOption.CREATE));
+        var outputStream = Channels.newOutputStream(bc);
+
+        var megaByte = 1024 * 1024;
+        for(int i = 0; i < megaByte; i++) { //1 megabyte
+            outputStream.write(magicNumber);
+        }
+        outputStream.close();
+
+        var copyBc = controller.newByteChannel(file, Set.of(StandardOpenOption.READ));
+        var inputStream = Channels.newInputStream(copyBc);
+
+        for(int i = 0; i < megaByte; i++) { //1 megabyte
+            Assert.assertEquals(magicNumber, inputStream.read());
+        }
+        Assert.assertEquals(0, inputStream.available());
+
+        inputStream.close();
     }
 
     @Test
