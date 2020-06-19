@@ -8,16 +8,48 @@ import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.StringTokenizer;
 
 public class OFSPath implements Path {
     private final List<String> path;
     private final OFSFileSystem fs;
     private final boolean isAbsolute;
 
-    OFSPath(@NotNull List<String> path, @NotNull OFSFileSystem fs, boolean isAbsolute) {
-        this.path = path;
+    /**
+     * Constructs OFSPath from list of names. Doesn't check for path validity!
+     * @param pathNames List, containing valid names.
+     * @param fs OFSFileSystem instance this path is attached to.
+     * @param isAbsolute Indicates whether this path is absolute or relative.
+     */
+    OFSPath(@NotNull List<String> pathNames, @NotNull OFSFileSystem fs, boolean isAbsolute) {
+        this.path = pathNames;
         this.fs = fs;
         this.isAbsolute = isAbsolute;
+    }
+
+    /**
+     * Constructs OFSPath from it's string representation. Doesn't check for path validity!
+     * @param representation Path represented as as String, e.g. obtained by uri.getSchemeSpecificPart().
+     * @param fs OFSFileSystem instance this path is attached to.
+     */
+    OFSPath(@NotNull String representation, @NotNull OFSFileSystem fs) {
+        StringTokenizer st = new StringTokenizer(representation, OFSFileSystem.SEPARATOR);
+        List<String> pathNames = new ArrayList<>();
+
+        while(st.hasMoreTokens()) {
+            var token = st.nextToken();
+            pathNames.add(token);
+        }
+
+        if(pathNames.size() > 0 && pathNames.get(0).equals(OFSFileSystemProvider.ROOT)) {
+            pathNames = pathNames.subList(1, pathNames.size());
+            this.isAbsolute = true;
+        } else {
+            this.isAbsolute = false;
+        }
+
+        this.path = pathNames;
+        this.fs = fs;
     }
 
     @NotNull

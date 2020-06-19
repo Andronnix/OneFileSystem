@@ -61,21 +61,7 @@ public class OFSFileSystemProvider extends FileSystemProvider {
             throw new FileSystemNotFoundException();
         }
 
-        StringTokenizer st = new StringTokenizer(uri.getSchemeSpecificPart(), OFSFileSystem.SEPARATOR);
-        List<String> path = new ArrayList<>();
-
-        while(st.hasMoreTokens()) {
-            var token = st.nextToken();
-            path.add(token);
-        }
-
-        boolean isAbsolutePath = false;
-        if(path.size() > 0 && path.get(0).equals(ROOT)) {
-            path = path.subList(1, path.size());
-            isAbsolutePath = true;
-        }
-
-        return new OFSPath(path, fileSystem, isAbsolutePath);
+        return new OFSPath(uri.getSchemeSpecificPart(), fileSystem);
     }
 
     @Override

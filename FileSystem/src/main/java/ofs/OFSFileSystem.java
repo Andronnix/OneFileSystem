@@ -1,10 +1,13 @@
 package ofs;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.nio.file.spi.FileSystemProvider;
+import java.util.List;
 import java.util.Set;
 
 public class OFSFileSystem extends FileSystem {
@@ -53,7 +56,7 @@ public class OFSFileSystem extends FileSystem {
 
     @Override
     public Iterable<Path> getRootDirectories() {
-        throw new UnsupportedOperationException("Not implemented yet.");
+        return List.of(new OFSPath(List.of(OFSFileSystemProvider.ROOT), this, true));
     }
 
     @Override
@@ -66,9 +69,12 @@ public class OFSFileSystem extends FileSystem {
         throw new UnsupportedOperationException("Not implemented yet.");
     }
 
+    @NotNull
     @Override
-    public Path getPath(String first, String... more) {
-        throw new UnsupportedOperationException("Not implemented yet.");
+    public Path getPath(@NotNull String first, @NotNull String... more) {
+        String repr = first + OFSFileSystem.SEPARATOR + String.join(OFSFileSystem.SEPARATOR, more);
+
+        return new OFSPath(repr, this);
     }
 
     @Override
