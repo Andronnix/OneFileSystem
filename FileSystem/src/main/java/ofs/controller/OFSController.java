@@ -1,7 +1,5 @@
 package ofs.controller;
 
-import ofs.OFSPath;
-
 import java.io.IOException;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.*;

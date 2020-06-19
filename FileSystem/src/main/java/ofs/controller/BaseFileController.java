@@ -4,9 +4,7 @@ import java.io.*;
 import java.nio.channels.Channels;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.*;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.nio.file.attribute.FileAttribute;
-import java.nio.file.attribute.FileAttributeView;
+import java.nio.file.attribute.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -25,7 +23,7 @@ public class BaseFileController implements OFSController {
         var strPath = path.toString();
 
         if(!files.containsKey(strPath)) {
-            var head = new FileHead();
+            var head = new FileHead(false);
             files.put(strPath, head);
         }
 
@@ -44,7 +42,13 @@ public class BaseFileController implements OFSController {
 
     @Override
     public void createDirectory(Path dir, FileAttribute<?>... attrs) throws IOException {
+        var dirStr = dir.toString();
+        if(files.containsKey(dirStr)) {
+            throw new FileAlreadyExistsException(dirStr);
+        }
 
+        var head = new FileHead(true);
+        files.put(dirStr, head);
     }
 
     @Override
@@ -111,21 +115,32 @@ public class BaseFileController implements OFSController {
 
     @Override
     public <V extends FileAttributeView> V getFileAttributeView(Path path, Class<V> type, LinkOption... options) {
+        if (type == null)
+            throw new NullPointerException();
+
+        if (type == BasicFileAttributeView.class)
+            return (V) new BlockFileAttributeView(files.get(path));
+
         return null;
     }
 
     @Override
     public <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options) throws IOException {
+        if (type == null)
+            throw new NullPointerException();
+
+        if (type == BasicFileAttributes.class)
+            return (A) new BlockFileAttributes(files.get(path.toString()));
+
         return null;
     }
 
     @Override
     public Map<String, Object> readAttributes(Path path, String attributes, LinkOption... options) throws IOException {
-        return null;
+        return new BlockFileAttributes(files.get(path.toString())).toMap();
     }
 
     @Override
     public void setAttribute(Path path, String attribute, Object value, LinkOption... options) throws IOException {
-
     }
 }
