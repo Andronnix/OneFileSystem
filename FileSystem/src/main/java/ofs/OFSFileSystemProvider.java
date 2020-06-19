@@ -73,7 +73,7 @@ public class OFSFileSystemProvider extends FileSystemProvider {
         if(!(path instanceof OFSPath))
             throw new IllegalArgumentException();
 
-        return controller.newByteChannel((OFSPath) path, options, attrs);
+        return controller.newByteChannel(path, options, attrs);
     }
 
     @Override
@@ -81,7 +81,7 @@ public class OFSFileSystemProvider extends FileSystemProvider {
         if(!(dir instanceof OFSPath))
             throw new IllegalArgumentException();
 
-        return controller.newDirectoryStream((OFSPath) dir, filter);
+        return controller.newDirectoryStream(dir, filter);
     }
 
     @Override
@@ -89,7 +89,7 @@ public class OFSFileSystemProvider extends FileSystemProvider {
         if(!(dir instanceof OFSPath))
             throw new IllegalArgumentException();
 
-        controller.createDirectory((OFSPath) dir, attrs);
+        controller.createDirectory(dir, attrs);
     }
 
     @Override
@@ -97,7 +97,7 @@ public class OFSFileSystemProvider extends FileSystemProvider {
         if(!(path instanceof OFSPath))
             throw new IllegalArgumentException();
 
-        controller.delete((OFSPath) path);
+        controller.delete(path);
     }
 
     @Override
@@ -105,7 +105,7 @@ public class OFSFileSystemProvider extends FileSystemProvider {
         if(!(source instanceof OFSPath && target instanceof OFSPath))
             throw new IllegalArgumentException();
 
-        controller.copy((OFSPath) source, (OFSPath) target, options);
+        controller.copy(source, target, options);
     }
 
     @Override
@@ -113,7 +113,7 @@ public class OFSFileSystemProvider extends FileSystemProvider {
         if(!(source instanceof OFSPath && target instanceof OFSPath))
             throw new IllegalArgumentException();
 
-        controller.move((OFSPath) source, (OFSPath) target, options);
+        controller.move(source, target, options);
     }
 
     @Override
@@ -136,7 +136,7 @@ public class OFSFileSystemProvider extends FileSystemProvider {
         if(!(path instanceof OFSPath))
             throw new IllegalArgumentException();
 
-        if(!controller.exists((OFSPath) path))
+        if(!controller.exists(path))
             throw new UnsupportedOperationException();
     }
 
@@ -145,7 +145,7 @@ public class OFSFileSystemProvider extends FileSystemProvider {
         if(!(path instanceof OFSPath))
             throw new IllegalArgumentException();
 
-        return controller.getFileAttributeView((OFSPath) path, type, options);
+        return controller.getFileAttributeView(path, type, options);
     }
 
     @Override
@@ -153,7 +153,7 @@ public class OFSFileSystemProvider extends FileSystemProvider {
         if(!(path instanceof OFSPath))
             throw new IllegalArgumentException();
 
-        return controller.readAttributes((OFSPath) path, type, options);
+        return controller.readAttributes(path, type, options);
     }
 
     @Override
@@ -161,7 +161,7 @@ public class OFSFileSystemProvider extends FileSystemProvider {
         if(!(path instanceof OFSPath))
             throw new IllegalArgumentException();
 
-        return controller.readAttributes((OFSPath) path, attributes, options);
+        return controller.readAttributes(path, attributes, options);
     }
 
     @Override
@@ -169,6 +169,6 @@ public class OFSFileSystemProvider extends FileSystemProvider {
         if(!(path instanceof OFSPath))
             throw new IllegalArgumentException();
 
-        controller.setAttribute((OFSPath) path, attribute, value, options);
+        controller.setAttribute(path, attribute, value, options);
     }
 }

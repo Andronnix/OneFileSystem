@@ -1,9 +1,6 @@
 package ofs.controller;
 
-import ofs.OFSPath;
-
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -20,57 +17,57 @@ public class TempFileController implements OFSController {
     }
 
     @Override
-    public SeekableByteChannel newByteChannel(OFSPath path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
+    public SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
         return null;
     }
 
     @Override
-    public DirectoryStream<Path> newDirectoryStream(OFSPath dir, DirectoryStream.Filter<? super Path> filter) throws IOException {
+    public DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) throws IOException {
         return null;
     }
 
     @Override
-    public boolean exists(OFSPath path) throws IOException {
+    public boolean exists(Path path) throws IOException {
         return false;
     }
 
     @Override
-    public void createDirectory(OFSPath dir, FileAttribute<?>... attrs) throws IOException {
+    public void createDirectory(Path dir, FileAttribute<?>... attrs) throws IOException {
 
     }
 
     @Override
-    public void delete(OFSPath path) throws IOException {
+    public void delete(Path path) throws IOException {
 
     }
 
     @Override
-    public void copy(OFSPath source, OFSPath target, CopyOption... options) throws IOException {
+    public void copy(Path source, Path target, CopyOption... options) throws IOException {
 
     }
 
     @Override
-    public void move(OFSPath source, OFSPath target, CopyOption... options) throws IOException {
+    public void move(Path source, Path target, CopyOption... options) throws IOException {
 
     }
 
     @Override
-    public <V extends FileAttributeView> V getFileAttributeView(OFSPath path, Class<V> type, LinkOption... options) {
+    public <V extends FileAttributeView> V getFileAttributeView(Path path, Class<V> type, LinkOption... options) {
         return null;
     }
 
     @Override
-    public <A extends BasicFileAttributes> A readAttributes(OFSPath path, Class<A> type, LinkOption... options) throws IOException {
+    public <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options) throws IOException {
         return null;
     }
 
     @Override
-    public Map<String, Object> readAttributes(OFSPath path, String attributes, LinkOption... options) throws IOException {
+    public Map<String, Object> readAttributes(Path path, String attributes, LinkOption... options) throws IOException {
         return null;
     }
 
     @Override
-    public void setAttribute(OFSPath path, String attribute, Object value, LinkOption... options) throws IOException {
+    public void setAttribute(Path path, String attribute, Object value, LinkOption... options) throws IOException {
 
     }
 }
