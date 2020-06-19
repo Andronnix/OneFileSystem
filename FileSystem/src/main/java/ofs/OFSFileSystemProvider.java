@@ -1,7 +1,7 @@
 package ofs;
 
 import ofs.controller.OFSController;
-import ofs.controller.BaseFileController;
+import ofs.blockimpl.BlockFileController;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -38,7 +38,7 @@ public class OFSFileSystemProvider extends FileSystemProvider {
             );
         }
 
-        controller = new BaseFileController(Files.createTempFile("ofs", "sfo"));
+        controller = new BlockFileController(Files.createTempFile("ofs", "sfo"));
         fileSystem = new OFSFileSystem(this);
 
         return fileSystem;

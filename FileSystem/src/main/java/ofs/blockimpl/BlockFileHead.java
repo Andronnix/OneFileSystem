@@ -1,15 +1,15 @@
-package ofs.controller;
+package ofs.blockimpl;
 
 import java.util.ArrayList;
 
-public class FileHead {
+public class BlockFileHead {
     public static int BLOCK_SIZE = 1024;
     private final ArrayList<Integer> blocks = new ArrayList<>();
     public final boolean isDirectory;
 
     private int byteCount = 0;
 
-    FileHead(boolean isDirectory) {
+    BlockFileHead(boolean isDirectory) {
         this.isDirectory = isDirectory;
     }
 

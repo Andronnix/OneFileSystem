@@ -1,4 +1,4 @@
-package ofs.controller;
+package ofs.blockimpl;
 
 import java.io.IOException;
 import java.nio.file.attribute.BasicFileAttributeView;
@@ -6,9 +6,9 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 
 public class BlockFileAttributeView implements BasicFileAttributeView {
-    private final FileHead file;
+    private final BlockFileHead file;
 
-    BlockFileAttributeView(FileHead file) {
+    BlockFileAttributeView(BlockFileHead file) {
         this.file = file;
     }
 

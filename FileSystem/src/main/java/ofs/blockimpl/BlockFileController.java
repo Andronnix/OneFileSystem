@@ -1,4 +1,6 @@
-package ofs.controller;
+package ofs.blockimpl;
+
+import ofs.controller.OFSController;
 
 import java.io.*;
 import java.nio.channels.Channels;
@@ -9,12 +11,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-public class BaseFileController implements OFSController {
+public class BlockFileController implements OFSController {
     private final SeekableByteChannel channel;
-    private final Map<String, FileHead> files = new HashMap<>();
-    private final FileBlockManager blockManager = new FileBlockManager();
+    private final Map<String, BlockFileHead> files = new HashMap<>();
+    private final BlockManager blockManager = new BlockManager();
 
-    public BaseFileController(Path baseFile) throws IOException {
+    public BlockFileController(Path baseFile) throws IOException {
         this.channel = Files.newByteChannel(baseFile, Set.of(StandardOpenOption.READ, StandardOpenOption.WRITE));
     }
 
@@ -23,7 +25,7 @@ public class BaseFileController implements OFSController {
         var strPath = path.toString();
 
         if(!files.containsKey(strPath)) {
-            var head = new FileHead(false);
+            var head = new BlockFileHead(false);
             files.put(strPath, head);
         }
 
@@ -47,7 +49,7 @@ public class BaseFileController implements OFSController {
             throw new FileAlreadyExistsException(dirStr);
         }
 
-        var head = new FileHead(true);
+        var head = new BlockFileHead(true);
         files.put(dirStr, head);
     }
 
@@ -58,7 +60,7 @@ public class BaseFileController implements OFSController {
             throw new NoSuchFileException(strPath);
         }
 
-        FileHead h = files.remove(strPath);
+        BlockFileHead h = files.remove(strPath);
 
         for(var block : h.getBlocks()) {
             blockManager.freeBlock(block);
@@ -105,7 +107,7 @@ public class BaseFileController implements OFSController {
             throw new NoSuchFileException(sourcePath);
         }
 
-        FileHead h = files.remove(sourcePath);
+        BlockFileHead h = files.remove(sourcePath);
         files.put(target.toString(), h);
 
         for(var block : h.getBlocks()) {

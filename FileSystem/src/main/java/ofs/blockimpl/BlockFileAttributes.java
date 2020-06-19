@@ -1,12 +1,12 @@
-package ofs.controller;
+package ofs.blockimpl;
 
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.util.Map;
 
 public class BlockFileAttributes implements BasicFileAttributes {
-    private final FileHead file;
-    BlockFileAttributes(FileHead file) {
+    private final BlockFileHead file;
+    BlockFileAttributes(BlockFileHead file) {
         this.file = file;
     }
 

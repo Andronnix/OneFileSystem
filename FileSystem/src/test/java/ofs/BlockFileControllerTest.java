@@ -1,6 +1,6 @@
 package ofs;
 
-import ofs.controller.BaseFileController;
+import ofs.blockimpl.BlockFileController;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -12,12 +12,12 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.HashSet;
 import java.util.Set;
 
-public class BaseFileControllerTest {
-    private BaseFileController controller;
+public class BlockFileControllerTest {
+    private BlockFileController controller;
 
     @Before
     public void createController() throws IOException {
-        controller = new BaseFileController(Files.createTempFile("test", "test"));
+        controller = new BlockFileController(Files.createTempFile("test", "test"));
     }
 
     @Test

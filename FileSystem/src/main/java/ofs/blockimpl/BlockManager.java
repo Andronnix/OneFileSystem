@@ -1,9 +1,9 @@
-package ofs.controller;
+package ofs.blockimpl;
 
 
 import java.util.Optional;
 
-public class FileBlockManager {
+public class BlockManager {
     private int lastBlock = 0;
 
     public void freeBlock(int index) {

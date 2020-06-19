@@ -2,7 +2,6 @@ package ofs;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.UserPrincipalLookupService;
@@ -56,7 +55,7 @@ public class OFSFileSystem extends FileSystem {
 
     @Override
     public Set<String> supportedFileAttributeViews() {
-        throw new UnsupportedOperationException("Not implemented yet.");
+        return Set.of("basic");
     }
 
     @NotNull
