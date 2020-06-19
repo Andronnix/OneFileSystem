@@ -1,6 +1,7 @@
 package ofs;
 
 import ofs.controller.OFSController;
+import ofs.controller.TempFileController;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -37,6 +38,7 @@ public class OFSFileSystemProvider extends FileSystemProvider {
             );
         }
 
+        controller = new TempFileController();
         fileSystem = new OFSFileSystem(this);
 
         return fileSystem;
