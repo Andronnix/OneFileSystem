@@ -1,6 +1,7 @@
 package ofs.controller;
 
 import java.io.*;
+import java.nio.channels.Channels;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -62,7 +63,35 @@ public class BaseFileController implements OFSController {
 
     @Override
     public void copy(Path source, Path target, CopyOption... options) throws IOException {
-        throw new UnsupportedOperationException("Not implemented yet");
+        var sourcePath = source.toString();
+        if(!files.containsKey(sourcePath)) {
+            throw new NoSuchFileException(sourcePath);
+        }
+        var targetPath = target.toString();
+
+        var replaceExisting = false;
+        var copyAttributes = false;
+        for(var opt : options) {
+            if(opt == StandardCopyOption.REPLACE_EXISTING) {
+                replaceExisting = true;
+            }
+            if(opt == StandardCopyOption.COPY_ATTRIBUTES) {
+                copyAttributes = true;
+            }
+        }
+
+        if(files.containsKey(targetPath)) {
+            if(!replaceExisting) {
+                throw new FileAlreadyExistsException(targetPath);
+            }
+
+            delete(target);
+        }
+
+        var targetStream = Channels.newOutputStream(newByteChannel(target, Set.of(StandardOpenOption.WRITE, StandardOpenOption.CREATE_NEW)));
+        var sourceStream = Channels.newInputStream(newByteChannel(source, Set.of(StandardOpenOption.READ)));
+
+        sourceStream.transferTo(targetStream);
     }
 
     @Override
