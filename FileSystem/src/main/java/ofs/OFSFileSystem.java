@@ -56,7 +56,7 @@ public class OFSFileSystem extends FileSystem {
 
     @Override
     public Iterable<Path> getRootDirectories() {
-        return List.of(new OFSPath(List.of(OFSFileSystemProvider.ROOT), this, true));
+        return List.of(new OFSPath(List.of(), this, true));
     }
 
     @Override

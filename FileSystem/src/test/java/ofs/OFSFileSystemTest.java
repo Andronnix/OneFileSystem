@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileSystems;
 import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -52,5 +54,18 @@ public class OFSFileSystemTest {
         var fs = FileSystems.getFileSystem(URI.create("ofs:]=$"));
 
         fs.getPath("a$$b");
+    }
+
+    @Test
+    public void thereIsOnlyOneRoot() {
+        var fs = FileSystems.getFileSystem(URI.create("ofs:]=$"));
+
+        var rootDirs = fs.getRootDirectories().iterator();
+        Assert.assertTrue(rootDirs.hasNext());
+
+        var root = rootDirs.next();
+        Assert.assertFalse(rootDirs.hasNext());
+
+        Assert.assertEquals(root.getRoot(), root);
     }
 }
