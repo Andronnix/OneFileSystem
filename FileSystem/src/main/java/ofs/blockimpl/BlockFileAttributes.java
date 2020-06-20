@@ -2,6 +2,7 @@ package ofs.blockimpl;
 
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
+import java.time.Instant;
 import java.util.Map;
 
 public class BlockFileAttributes implements BasicFileAttributes {
@@ -12,17 +13,17 @@ public class BlockFileAttributes implements BasicFileAttributes {
 
     @Override
     public FileTime lastModifiedTime() {
-        return null;
+        return FileTime.from(Instant.EPOCH);
     }
 
     @Override
     public FileTime lastAccessTime() {
-        return null;
+        return FileTime.from(Instant.EPOCH);
     }
 
     @Override
     public FileTime creationTime() {
-        return null;
+        return FileTime.from(Instant.EPOCH);
     }
 
     @Override
