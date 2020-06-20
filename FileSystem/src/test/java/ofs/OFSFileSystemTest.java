@@ -64,6 +64,6 @@ public class OFSFileSystemTest {
         var root = rootDirs.next();
         Assert.assertFalse(rootDirs.hasNext());
 
-        Assert.assertEquals(root.getRoot(), root);
+        Assert.assertNull(root.getRoot());
     }
 }

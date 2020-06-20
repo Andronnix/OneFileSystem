@@ -22,7 +22,7 @@ public class OFSPathTest {
         var path = Path.of(URI.create("ofs:]=$"));
 
         Assert.assertTrue(path.isAbsolute());
-        Assert.assertEquals(path, path.getRoot());
+        Assert.assertNull(path.getRoot());
         Assert.assertEquals(0, path.getNameCount());
     }
 

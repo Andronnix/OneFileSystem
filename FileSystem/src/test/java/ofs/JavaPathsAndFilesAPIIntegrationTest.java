@@ -9,6 +9,7 @@ import java.net.URI;
 import java.nio.file.*;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class JavaPathsAndFilesAPIIntegrationTest {
@@ -22,7 +23,7 @@ public class JavaPathsAndFilesAPIIntegrationTest {
         var p = Paths.get(URI.create("ofs:]=$"));
 
         Assert.assertTrue(p.isAbsolute());
-        Assert.assertEquals(p.getRoot(), p);
+        Assert.assertNull(p.getRoot());
     }
 
     @Test
@@ -105,20 +106,11 @@ public class JavaPathsAndFilesAPIIntegrationTest {
         Assert.assertTrue(Files.exists(dir1));
         Assert.assertTrue(Files.exists(dir2));
 
-        var f0 = Files.createFile(base.resolve(Path.of("file0")));
-        var f1 = Files.createFile(dir1.resolve(Path.of("file1")));
-        var f2 = Files.createFile(dir2.resolve(Path.of("file2")));
-
-        Assert.assertTrue(Files.exists(dir1));
-        Assert.assertTrue(Files.exists(dir2));
-        Assert.assertTrue(Files.exists(f0));
-        Assert.assertTrue(Files.exists(f1));
-        Assert.assertTrue(Files.exists(f2));
-
-        var visitOrder = List.of("walk_file_tree", "base", "base1", "c", "dir1", "file1", "dir2", "file2", "file0");
+        var visitOrder = List.of("walk_file_tree", "base", "base1", "c", "dir1", "dir2");
         var realVisits = Files
                 .walk(Paths.get(URI.create("ofs:]=$")))
                 .map(Path::getFileName)
+                .filter(Objects::nonNull)
                 .map(Path::toString)
                 .collect(Collectors.toList());
 

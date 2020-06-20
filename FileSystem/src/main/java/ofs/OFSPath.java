@@ -65,7 +65,7 @@ public class OFSPath implements Path {
 
     @Override
     public Path getRoot() {
-        if(!isAbsolute())
+        if(!isAbsolute() || path.size() == 0)
             return null;
 
         return new OFSPath(List.of(), fs, true);
