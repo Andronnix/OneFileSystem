@@ -27,12 +27,12 @@ public class BlockFileAttributes implements BasicFileAttributes {
 
     @Override
     public boolean isRegularFile() {
-        return file != null && !file.isDirectory;
+        return file != null && !file.isDirectory();
     }
 
     @Override
     public boolean isDirectory() {
-        return file != null && file.isDirectory;
+        return file != null && file.isDirectory();
     }
 
     @Override

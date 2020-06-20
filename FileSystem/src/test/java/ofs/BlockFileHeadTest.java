@@ -19,7 +19,7 @@ public class BlockFileHeadTest {
 
         BlockFileHead deserialized = new BlockFileHead(serialized);
 
-        Assert.assertFalse(deserialized.isDirectory);
+        Assert.assertFalse(deserialized.isDirectory());
         Assert.assertEquals(head.getByteCount(), deserialized.getByteCount());
         Assert.assertEquals(head.getBlocks().size(), deserialized.getBlocks().size());
         for(int i = 0; i < head.getBlocks().size(); i++) {

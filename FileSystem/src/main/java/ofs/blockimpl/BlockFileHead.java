@@ -1,15 +1,27 @@
 package ofs.blockimpl;
 
+import ofs.controller.OFSFileHead;
+import org.jetbrains.annotations.NotNull;
+
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 
-public class BlockFileHead {
+public class BlockFileHead implements OFSFileHead {
     public static int BLOCK_SIZE = 1024;
     private final String name;
     private final ArrayList<Integer> blocks = new ArrayList<>();
-    public final boolean isDirectory;
+    private final boolean isDirectory;
 
     private int byteCount = 0;
+
+    public BlockFileHead copyWithName(@NotNull String newName) {
+        var result = new BlockFileHead(newName, isDirectory);
+        for(var b : blocks) {
+            result.expand(b);
+        }
+
+        return result;
+    }
 
     public BlockFileHead(String name, boolean isDirectory) {
         this.name = name;
@@ -67,5 +79,15 @@ public class BlockFileHead {
         }
 
         return result;
+    }
+
+    @Override
+    public String getName() {
+        return this.name;
+    }
+
+    @Override
+    public boolean isDirectory() {
+        return this.isDirectory;
     }
 }

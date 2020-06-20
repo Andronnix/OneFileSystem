@@ -107,7 +107,7 @@ public class BlockFileControllerTest {
     public void doesntDeleteNonEmptyDir() throws IOException {
         var dir = Path.of("some_dir");
         var file = Path.of("some_dir", "some_file");
-        var file2 = Path.of("some_dir", "some_file");
+        var file2 = Path.of("some_dir", "some_file2");
         controller.createDirectory(dir);
         controller.newByteChannel(file, Set.of(StandardOpenOption.CREATE));
         controller.newByteChannel(file2, Set.of(StandardOpenOption.CREATE));
@@ -227,6 +227,8 @@ public class BlockFileControllerTest {
     @Test
     public void providesCorrectDirectoryStream() throws IOException {
         Set<Integer> created = new HashSet<>();
+        controller.createDirectory(Path.of("src"));
+
         for(int i = 0; i < 100; i++) {
             controller.createDirectory(Path.of("src", Integer.toString(i)));
             created.add(i);
@@ -234,7 +236,7 @@ public class BlockFileControllerTest {
 
         controller.newDirectoryStream(Path.of("src"), p -> true)
                 .forEach(p -> Assert.assertTrue( // Ensure we don't have extra dirs we didn't create
-                        created.remove(Integer.parseInt(p.getName(0).toString()))
+                        created.remove(Integer.parseInt(p.getFileName().toString()))
                 ));
 
         Assert.assertTrue(created.isEmpty()); // Ensure we seen all dirs we have created

@@ -1,66 +1,118 @@
 package ofs.blockimpl;
 
 import ofs.controller.OFSController;
+import ofs.tree.OFSTree;
+import ofs.tree.OFSTreeNode;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
 import java.nio.channels.Channels;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.*;
 import java.nio.file.attribute.*;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class BlockFileController implements OFSController {
     private final SeekableByteChannel channel;
-    private final Map<String, BlockFileHead> files = new HashMap<>();
     private final BlockManager blockManager = new BlockManager();
+    private final OFSTree<BlockFileHead> fileTree;
 
     public BlockFileController(Path baseFile) throws IOException {
         this.channel = Files.newByteChannel(baseFile, Set.of(StandardOpenOption.READ, StandardOpenOption.WRITE));
+        this.fileTree = new OFSTree<>(new BlockFileHead("", true));
     }
 
     @Override
     public SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
-        var strPath = path.toString();
-
-        if(!files.containsKey(strPath)) {
-            var head = new BlockFileHead(path.getFileName().toString(), false);
-            files.put(strPath, head);
+        var node = fileTree.getNode(path);
+        if(node != null) {
+            if(node.isDirectory()) {
+                throw new IllegalArgumentException("Can't create byte channel from directory");
+            }
+            return new BlockFileByteChannel(channel, node.getFile(), blockManager);
         }
 
-        return new BlockFileByteChannel(channel, files.get(strPath), blockManager);
+        // File exists
+        var head = new BlockFileHead(path.getFileName().toString(), false);
+        if(!fileTree.addNode(path, head)) {
+            throw new IllegalArgumentException();
+        }
+
+        return new BlockFileByteChannel(channel
+                , head, blockManager);
     }
 
     @Override
     public DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) throws IOException {
-        return null;
+        var dirNode = fileTree.getNode(dir);
+
+        if(dirNode == null) {
+            throw new NoSuchFileException(dir.toString());
+        }
+
+        if(!dirNode.isDirectory()) {
+            throw new NotDirectoryException(dir.toString());
+        }
+
+        return new DirectoryStream<>() {
+            private boolean invoked = false;
+            @NotNull
+            @Override
+            public Iterator<Path> iterator() {
+                if(invoked)
+                    throw new IllegalStateException();
+
+                invoked = true;
+                return new Iterator<>() {
+                    private final List<OFSTreeNode<BlockFileHead>> children = dirNode.getChildDirectories();
+                    private int current = 0;
+                    @Override
+                    public boolean hasNext() {
+                        return current < children.size();
+                    }
+
+                    @Override
+                    public Path next() {
+                        var name = children.get(current).getFile().getName();
+                        current++;
+                        return dir.resolve(Path.of(name));
+                    }
+                };
+            }
+
+            @Override
+            public void close() throws IOException {}
+        };
     }
 
     @Override
     public boolean exists(Path path) throws IOException {
-        return files.containsKey(path.toString());
+        return fileTree.exists(path);
     }
 
     @Override
     public void createDirectory(Path dir, FileAttribute<?>... attrs) throws IOException {
-        var dirStr = dir.toString();
-        if(files.containsKey(dirStr)) {
-            throw new FileAlreadyExistsException(dirStr);
+        if(fileTree.exists(dir)) {
+            throw new FileAlreadyExistsException(dir.toString());
         }
 
+        var parent = fileTree.getParentNode(dir);
+        if(parent == null)
+            throw new NoSuchFileException(dir.toString());
+
         var head = new BlockFileHead(dir.getFileName().toString(), true);
-        files.put(dirStr, head);
+        if(!fileTree.addNode(dir, head)) {
+            throw new IllegalArgumentException();
+        }
     }
 
     @Override
     public void delete(Path path) throws IOException {
-        var strPath = path.toString();
-        if(!files.containsKey(strPath)) {
-            throw new NoSuchFileException(strPath);
+        if(!fileTree.exists(path)) {
+            throw new NoSuchFileException(path.toString());
         }
 
-        BlockFileHead h = files.remove(strPath);
+        BlockFileHead h = fileTree.deleteNode(path);
 
         for(var block : h.getBlocks()) {
             blockManager.freeBlock(block);
@@ -69,11 +121,9 @@ public class BlockFileController implements OFSController {
 
     @Override
     public void copy(Path source, Path target, CopyOption... options) throws IOException {
-        var sourcePath = source.toString();
-        if(!files.containsKey(sourcePath)) {
-            throw new NoSuchFileException(sourcePath);
+        if(!fileTree.exists(source)) {
+            throw new NoSuchFileException(source.toString());
         }
-        var targetPath = target.toString();
 
         var replaceExisting = false;
         var copyAttributes = false;
@@ -86,9 +136,9 @@ public class BlockFileController implements OFSController {
             }
         }
 
-        if(files.containsKey(targetPath)) {
+        if(fileTree.exists(target)) {
             if(!replaceExisting) {
-                throw new FileAlreadyExistsException(targetPath);
+                throw new FileAlreadyExistsException(target.toString());
             }
 
             delete(target);
@@ -102,17 +152,13 @@ public class BlockFileController implements OFSController {
 
     @Override
     public void move(Path source, Path target, CopyOption... options) throws IOException {
-        var sourcePath = source.toString();
-        if(!files.containsKey(sourcePath)) {
-            throw new NoSuchFileException(sourcePath);
+        if(!fileTree.exists(source)) {
+            throw new NoSuchFileException(source.toString());
         }
 
-        BlockFileHead h = files.remove(sourcePath);
-        files.put(target.toString(), h);
+        BlockFileHead head = fileTree.deleteNode(source).copyWithName(target.getFileName().toString());
 
-        for(var block : h.getBlocks()) {
-            blockManager.freeBlock(block);
-        }
+        fileTree.addNode(target, head);
     }
 
     @Override
@@ -121,7 +167,7 @@ public class BlockFileController implements OFSController {
             throw new NullPointerException();
 
         if (type == BasicFileAttributeView.class)
-            return (V) new BlockFileAttributeView(files.get(path));
+            return (V) new BlockFileAttributeView(fileTree.getNode(path).getFile());
 
         return null;
     }
@@ -132,14 +178,14 @@ public class BlockFileController implements OFSController {
             throw new NullPointerException();
 
         if (type == BasicFileAttributes.class)
-            return (A) new BlockFileAttributes(files.get(path.toString()));
+            return (A) new BlockFileAttributes(fileTree.getNode(path).getFile());
 
         return null;
     }
 
     @Override
     public Map<String, Object> readAttributes(Path path, String attributes, LinkOption... options) throws IOException {
-        return new BlockFileAttributes(files.get(path.toString())).toMap();
+        return new BlockFileAttributes(fileTree.getNode(path).getFile()).toMap();
     }
 
     @Override
