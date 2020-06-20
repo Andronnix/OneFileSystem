@@ -6,6 +6,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -57,6 +58,35 @@ public class BlockFileControllerTest {
         Assert.assertEquals(0, inputStream.available());
 
         inputStream.close();
+    }
+
+    @Test
+    public void writesToSparseFile() throws IOException {
+        var magicBuffer  = ByteBuffer.wrap(new byte[] { 1, 2, 3, 4, 5, 6});
+        var magicBuffer2 = ByteBuffer.wrap(new byte[] { 9, 8, 7, 6, 5, 4});
+        var veryDistantPosition = 1024 * 50;
+        var file = Path.of("file");
+        var bc = controller.newByteChannel(file, Set.of(StandardOpenOption.CREATE));
+        bc.write(magicBuffer);
+        bc.position(veryDistantPosition);
+        bc.write(magicBuffer2);
+        bc.close();
+
+        var copyBc = controller.newByteChannel(file, Set.of(StandardOpenOption.READ));
+        ByteBuffer dest = ByteBuffer.allocate(magicBuffer.capacity());
+        copyBc.read(dest);
+
+        dest.flip();
+        magicBuffer.flip();
+        Assert.assertEquals(magicBuffer, dest);
+
+        dest.flip();
+        copyBc.position(veryDistantPosition);
+        copyBc.read(dest);
+
+        dest.flip();
+        magicBuffer2.flip();
+        Assert.assertEquals(magicBuffer2, dest);
     }
 
     @Test

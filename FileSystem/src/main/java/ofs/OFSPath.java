@@ -150,9 +150,6 @@ public class OFSPath implements Path {
     @NotNull
     @Override
     public Path resolve(@NotNull Path other) {
-        if(!(other instanceof OFSPath))
-            throw new IllegalArgumentException();
-
         if(other.isAbsolute())
             return other;
 
@@ -160,7 +157,9 @@ public class OFSPath implements Path {
             return this;
 
         var resultList = new ArrayList<>(this.path);
-        resultList.addAll(((OFSPath) other).path);
+        for(int i = 0; i < other.getNameCount(); i++) {
+            resultList.add(other.getName(i).toString());
+        }
 
         return new OFSPath(resultList, fs, isAbsolute);
     }
