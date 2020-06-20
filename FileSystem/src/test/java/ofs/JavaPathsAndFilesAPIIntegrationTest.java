@@ -102,9 +102,18 @@ public class JavaPathsAndFilesAPIIntegrationTest {
         var dir1 = Files.createDirectories(base.resolve(Path.of("c", "dir1")));
         var dir2 = Files.createDirectories(base.resolve(Path.of("dir2")));
 
-        Files.createFile(base.resolve(Path.of("file0")));
-        Files.createFile(dir1.resolve(Path.of("file1")));
-        Files.createFile(dir2.resolve(Path.of("file2")));
+        Assert.assertTrue(Files.exists(dir1));
+        Assert.assertTrue(Files.exists(dir2));
+
+        var f0 = Files.createFile(base.resolve(Path.of("file0")));
+        var f1 = Files.createFile(dir1.resolve(Path.of("file1")));
+        var f2 = Files.createFile(dir2.resolve(Path.of("file2")));
+
+        Assert.assertTrue(Files.exists(dir1));
+        Assert.assertTrue(Files.exists(dir2));
+        Assert.assertTrue(Files.exists(f0));
+        Assert.assertTrue(Files.exists(f1));
+        Assert.assertTrue(Files.exists(f2));
 
         var visitOrder = List.of("walk_file_tree", "base", "base1", "c", "dir1", "file1", "dir2", "file2", "file0");
         var realVisits = Files

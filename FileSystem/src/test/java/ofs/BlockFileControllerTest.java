@@ -264,10 +264,12 @@ public class BlockFileControllerTest {
             created.add(i);
         }
 
-        controller.newDirectoryStream(Path.of("src"), p -> true)
-                .forEach(p -> Assert.assertTrue( // Ensure we don't have extra dirs we didn't create
-                        created.remove(Integer.parseInt(p.getFileName().toString()))
-                ));
+        try(var stream = controller.newDirectoryStream(Path.of("src"), p -> true)) {
+            // Ensure we don't have extra dirs we didn't create
+            for(var p : stream) {
+                Assert.assertTrue(created.remove(Integer.parseInt(p.getFileName().toString())));
+            }
+        }
 
         Assert.assertTrue(created.isEmpty()); // Ensure we seen all dirs we have created
     }
