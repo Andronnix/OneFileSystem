@@ -137,7 +137,7 @@ public class OFSFileSystemProvider extends FileSystemProvider {
             throw new IllegalArgumentException();
 
         if(!controller.exists(path))
-            throw new UnsupportedOperationException();
+            throw new NoSuchFileException(path.toString());
     }
 
     @Override
