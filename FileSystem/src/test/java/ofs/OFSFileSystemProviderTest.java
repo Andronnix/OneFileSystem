@@ -5,11 +5,10 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.FileSystemAlreadyExistsException;
-import java.nio.file.FileSystemNotFoundException;
-import java.nio.file.FileSystems;
-import java.nio.file.Path;
+import java.nio.channels.Channels;
+import java.nio.file.*;
 import java.util.Map;
+import java.util.Set;
 
 public class OFSFileSystemProviderTest {
     @Test
@@ -18,6 +17,46 @@ public class OFSFileSystemProviderTest {
 
         Assert.assertNotNull(provider.newFileSystem(URI.create("ofs:]=$"), Map.of()));
     }
+
+    /**
+     * This test creates new fs in a baseFile, creates a file in this fs and writes into it. Then fs is closed and
+     * a new fs using the same baseFile is created within a new provider.
+     * Test verifies that file exists and has the same content.
+     */
+    @Test
+    public void writesFileSystemToFile() throws IOException {
+
+        var basePath = Files.createTempFile("test", "test");
+
+        var provider = new OFSFileSystemProvider();
+        var fs = provider.newFileSystem(URI.create("ofs:]=$"), Map.of("basePath", basePath));
+
+        provider.createDirectory(fs.getPath("dir"));
+        var file = fs.getPath("dir", "some_file");
+        var bc = provider.newByteChannel(file, Set.of(StandardOpenOption.CREATE, StandardOpenOption.WRITE));
+
+        var outputStream = Channels.newOutputStream(bc);
+        for(byte b = 0; b < 10; b++)
+            outputStream.write(b);
+        outputStream.close();
+
+        fs.close();
+        provider = null;
+
+        var newProvider = new OFSFileSystemProvider();
+        var newFs = newProvider.newFileSystem(URI.create("ofs:]=$"), Map.of("basePath", basePath));
+        var newFile = newFs.getPath("dir", "some_file");
+        var newBc = newProvider.newByteChannel(newFile, Set.of(StandardOpenOption.READ));
+
+        var inputStream = Channels.newInputStream(newBc);
+        for(byte b = 0; b < 10; b++) {
+            Assert.assertEquals(b, inputStream.read());
+        }
+
+        Assert.assertEquals(0, inputStream.available());
+        inputStream.close();
+    }
+
 
     @Test(expected = IllegalArgumentException.class)
     public void refusesToCreateNonOFSFileSystem() throws IOException {
