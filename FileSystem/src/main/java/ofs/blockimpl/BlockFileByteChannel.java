@@ -28,12 +28,14 @@ public class BlockFileByteChannel implements SeekableByteChannel {
         int count = 0;
         ByteBuffer block = ByteBuffer.allocate(BlockFileHead.BLOCK_SIZE);
         while(dst.hasRemaining() && currentPosition < fileSize) {
+            int offset = currentPosition % BlockFileHead.BLOCK_SIZE;
             int currentBlock = currentPosition / BlockFileHead.BLOCK_SIZE;
             int blockBeginPosition = fileHead.getBlocks().get(currentBlock) * BlockFileHead.BLOCK_SIZE;
             channel.position(blockBeginPosition);
 
-            int readBytes = channel.read(block);
+            int readBytes = channel.read(block) - offset;
             block.flip();
+            block.position(offset);
 
             if(dst.remaining() >= readBytes) {
                 dst.put(block);

@@ -239,6 +239,26 @@ public class BlockFileControllerTest {
     }
 
     @Test
+    public void canTraverseByteChannels() throws IOException {
+        var file = Path.of("file");
+        var bc = controller.newByteChannel(file, Set.of(StandardOpenOption.CREATE));
+        var outputStream = Channels.newOutputStream(bc);
+        for(int i = 0; i < 100; i++) {
+            outputStream.write(i);
+        }
+        outputStream.close();
+
+        var copyBc = controller.newByteChannel(file, Set.of(StandardOpenOption.READ));
+        var inputStream = Channels.newInputStream(copyBc);
+        for(int i = 0; i < 50; i++) {
+            Assert.assertEquals(i * 2, inputStream.read());
+            inputStream.skip(1);
+        }
+
+        inputStream.close();
+    }
+
+    @Test
     public void movesDirectoriesToAnotherLevel() throws IOException {
         var dir = Path.of("dir");
         controller.createDirectory(dir);

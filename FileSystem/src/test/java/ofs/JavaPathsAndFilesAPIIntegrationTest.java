@@ -6,6 +6,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.*;
 import java.util.List;
 import java.util.Map;
@@ -98,6 +99,19 @@ public class JavaPathsAndFilesAPIIntegrationTest {
     }
 
     @Test
+    public void copiesRealFileFromAnotherFs() throws IOException, URISyntaxException {
+        var f = JavaPathsAndFilesAPIIntegrationTest.class.getResource("/jetbrains");
+        var src = Path.of(f.toURI());
+        var dest = Paths.get(URI.create("ofs:]=$logo.png"));
+
+        Files.copy(src, dest);
+
+        Assert.assertTrue(Files.exists(src));
+        Assert.assertTrue(Files.exists(dest));
+        Assert.assertEquals(Files.size(src), Files.size(dest));
+    }
+
+    @Test
     public void walksFileTree() throws IOException {
         var base = Paths.get(URI.create("ofs:]=$walk_file_tree$base$base1"));
         var dir1 = Files.createDirectories(base.resolve(Path.of("c", "dir1")));
@@ -112,7 +126,6 @@ public class JavaPathsAndFilesAPIIntegrationTest {
                 .map(Path::getFileName)
                 .filter(Objects::nonNull)
                 .map(Path::toString)
-                .peek(System.out::println)
                 .collect(Collectors.toList());
 
         Assert.assertEquals(visitOrder.size(), realVisits.size());
