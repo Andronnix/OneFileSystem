@@ -108,10 +108,11 @@ public class JavaPathsAndFilesAPIIntegrationTest {
 
         var visitOrder = List.of("walk_file_tree", "base", "base1", "c", "dir1", "dir2");
         var realVisits = Files
-                .walk(Paths.get(URI.create("ofs:]=$")))
+                .walk(Paths.get(URI.create("ofs:]=$walk_file_tree")))
                 .map(Path::getFileName)
                 .filter(Objects::nonNull)
                 .map(Path::toString)
+                .peek(System.out::println)
                 .collect(Collectors.toList());
 
         Assert.assertEquals(visitOrder.size(), realVisits.size());
