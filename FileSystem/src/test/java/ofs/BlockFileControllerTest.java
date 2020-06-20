@@ -80,7 +80,7 @@ public class BlockFileControllerTest {
         magicBuffer.flip();
         Assert.assertEquals(magicBuffer, dest);
 
-        dest.flip();
+        dest.clear();
         copyBc.position(veryDistantPosition);
         copyBc.read(dest);
 

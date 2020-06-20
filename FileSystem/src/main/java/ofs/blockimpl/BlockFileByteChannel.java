@@ -29,7 +29,7 @@ public class BlockFileByteChannel implements SeekableByteChannel {
         ByteBuffer block = ByteBuffer.allocate(BlockFileHead.BLOCK_SIZE);
         while(dst.hasRemaining() && currentPosition < fileSize) {
             int currentBlock = currentPosition / BlockFileHead.BLOCK_SIZE;
-            int blockBeginPosition = fileHead.getBlocks().get(currentBlock);
+            int blockBeginPosition = fileHead.getBlocks().get(currentBlock) * BlockFileHead.BLOCK_SIZE;
             channel.position(blockBeginPosition);
 
             int readBytes = channel.read(block);
@@ -54,28 +54,40 @@ public class BlockFileByteChannel implements SeekableByteChannel {
         return count;
     }
 
+    private void ensureFileHasEnoughBlocks(int writeBytes) throws IOException {
+        var neededCapacity = writeBytes + currentPosition;
+        var neededBlocks = (int) Math.ceil(neededCapacity / (1.0 * BlockFileHead.BLOCK_SIZE));
+        var blocksToAllocate = neededBlocks - fileHead.getBlocks().size();
+        if(blocksToAllocate <= 0)
+            return;
+
+        var blocks = blockManager.allocateBlocks(blocksToAllocate);
+        if(blocks.isEmpty()) {
+            throw new IOException("Couldn't allocate enough space");
+        }
+
+        for(var block : blocks.get()) {
+            fileHead.expand(block);
+        }
+    }
+
     @Override
     public int write(ByteBuffer src) throws IOException {
         var bytesWritten = 0;
-        var oldFileSize = fileHead.getByteCount();
         var startingPosition = currentPosition;
+
+        ensureFileHasEnoughBlocks(src.remaining());
 
         ByteBuffer buffer = ByteBuffer.allocate(BlockFileHead.BLOCK_SIZE);
         while(src.hasRemaining()) {
             var bytesLeftInCurrentBlock = BlockFileHead.BLOCK_SIZE - currentPosition % BlockFileHead.BLOCK_SIZE;
 
-            if(bytesLeftInCurrentBlock == BlockFileHead.BLOCK_SIZE && currentPosition >= oldFileSize) {
-                var blockPtr = blockManager.allocateBlock();
-                if(blockPtr.isEmpty()) {
-                    fileHead.setByteCount(startingPosition + bytesWritten);
-                    return bytesWritten;
-                }
-
-                fileHead.expand(blockPtr.get());
+            if(bytesLeftInCurrentBlock == BlockFileHead.BLOCK_SIZE) {
+                var currentBlock = currentPosition / BlockFileHead.BLOCK_SIZE;
+                channel.position(fileHead.getBlocks().get(currentBlock) * BlockFileHead.BLOCK_SIZE);
             }
 
             var bytesToWrite = Math.min(src.remaining(), bytesLeftInCurrentBlock);
-
             for(int i = 0; i < bytesToWrite; i++) {
                 buffer.put(src.get());
             }
@@ -85,7 +97,7 @@ public class BlockFileByteChannel implements SeekableByteChannel {
             currentPosition += bytesToWrite;
             bytesWritten += bytesToWrite;
 
-            buffer.rewind();
+            buffer.clear();
         }
 
         fileHead.setByteCount(startingPosition + bytesWritten);
