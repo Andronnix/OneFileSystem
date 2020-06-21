@@ -13,14 +13,17 @@ import java.nio.file.attribute.*;
 import java.util.*;
 
 public class BlockFileController implements OFSController {
+    private static final int MAX_BLOCKS = 1024;
     private final SeekableByteChannel channel;
-    private final BlockManager blockManager = new BlockManager();
+    private final BlockManager blockManager = new BlockManager(MAX_BLOCKS);
     private final OFSTree<BlockFileHead> fileTree;
 
     public BlockFileController(Path baseFile) throws IOException {
         this.channel = Files.newByteChannel(baseFile, Set.of(StandardOpenOption.READ, StandardOpenOption.WRITE));
         this.fileTree = new OFSTree<>(new BlockFileHead("", true));
     }
+
+
 
     @Override
     public SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {

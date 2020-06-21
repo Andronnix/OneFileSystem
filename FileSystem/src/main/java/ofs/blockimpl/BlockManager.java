@@ -5,10 +5,31 @@ import java.util.ArrayList;
 import java.util.Optional;
 
 public class BlockManager {
-    private int afterLastBlock = 0;
+    private final int maxBlocks;
+    private final boolean[] occupied;
+    private int occupiedCount = 0;
+    private int lastBlock = 0;
+
+    public BlockManager(int maxBlocks) {
+        this.maxBlocks = maxBlocks;
+        this.occupied = new boolean[maxBlocks];
+    }
 
     public void freeBlock(int index) {
-        //
+        if(occupied[index]) {
+            occupiedCount--;
+            occupied[index] = false;
+        }
+    }
+
+    private Integer allocateNextBlock() {
+        while(occupied[lastBlock]) {
+            lastBlock = (lastBlock + 1) % maxBlocks;
+        }
+
+        occupied[lastBlock] = true;
+        occupiedCount++;
+        return lastBlock;
     }
 
     /**
@@ -16,7 +37,11 @@ public class BlockManager {
      * @return Address of the allocated block if possible or empty optional if there is not enough space.
      */
     public Optional<Integer> allocateBlock() {
-        return Optional.of(afterLastBlock++);
+        if(occupiedCount == maxBlocks) {
+            return Optional.empty();
+        }
+
+        return Optional.of(allocateNextBlock());
     }
 
     /**
@@ -24,9 +49,13 @@ public class BlockManager {
      * @return List of addresses of the allocated blocks if possible or empty optional if there is not enough space.
      */
     public Optional<ArrayList<Integer>> allocateBlocks(int number) {
+        if(occupiedCount + number > maxBlocks) {
+            return Optional.empty();
+        }
+
         var result = new ArrayList<Integer>();
         for(int i = 0; i < number; i++) {
-            result.add(afterLastBlock++);
+            result.add(allocateNextBlock());
         }
 
         return Optional.of(result);

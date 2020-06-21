@@ -25,7 +25,6 @@ public class OFSFileSystemProviderTest {
      */
     @Test
     public void writesFileSystemToFile() throws IOException {
-
         var basePath = Files.createTempFile("test", "test");
 
         var provider = new OFSFileSystemProvider();
@@ -42,6 +41,8 @@ public class OFSFileSystemProviderTest {
 
         fs.close();
         provider = null;
+
+        Assert.assertTrue(Files.size(basePath) >= 10);
 
         var newProvider = new OFSFileSystemProvider();
         var newFs = newProvider.newFileSystem(URI.create("ofs:]=$"), Map.of("basePath", basePath));
