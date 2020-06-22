@@ -144,7 +144,7 @@ public class JavaPathsAndFilesAPIIntegrationTest {
         Assert.assertEquals(pre + post, Files.readString(file));
     }
 
-    @Test(expected = FileSystemAlreadyExistsException.class)
+    @Test(expected = FileAlreadyExistsException.class)
     public void failsToOpensFileIfExists() throws IOException {
         var file = Files.createFile(Paths.get(URI.create("ofs:]=$file_for_append")));
 
@@ -155,7 +155,7 @@ public class JavaPathsAndFilesAPIIntegrationTest {
 
     @Test
     public void truncatesFile() throws IOException {
-        var file = Files.createFile(Paths.get(URI.create("ofs:]=$file_for_append")));
+        var file = Files.createFile(Paths.get(URI.create("ofs:]=$file_for_truncate")));
 
         var pre = "pre";
         var post = "post";
