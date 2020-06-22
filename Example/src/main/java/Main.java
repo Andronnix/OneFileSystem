@@ -20,14 +20,15 @@ public class Main {
     void copyImage() throws IOException, URISyntaxException {
         FileSystems.newFileSystem(URI.create("ofs:]=$"), Map.of());
 
-        var resourcePath = Path.of(Main.class.getResource("/jetbrains.png").toURI());
-        var targetPath = Path.of(URI.create("ofs:]=$logo.png"));
+        var resourcePath = Path.of(Main.class.getResource("/inner/jetbrains.png").toURI());
+        var dir = Files.createDirectory(Path.of(URI.create("ofs:]=$inner_dir")));
+        var targetPath = dir.resolve("logo.png");
 
         Files.copy(resourcePath, targetPath);
     }
 
     void showImage() throws IOException {
-        var is = Files.newInputStream(Path.of(URI.create("ofs:]=$logo.png")));
+        var is = Files.newInputStream(Path.of(URI.create("ofs:]=$inner_dir$logo.png")));
 
         BufferedImage img = ImageIO.read(is);
         ImageIcon icon = new ImageIcon(img);
