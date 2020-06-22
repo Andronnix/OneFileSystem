@@ -21,6 +21,8 @@ public class BlockFileByteChannel implements SeekableByteChannel {
 
     @Override
     public int read(ByteBuffer dst) throws IOException {
+        ensureIsOpen();
+
         var fileSize = fileHead.getByteCount();
         if(currentPosition >= fileSize)
             return -1;
@@ -57,6 +59,8 @@ public class BlockFileByteChannel implements SeekableByteChannel {
     }
 
     private void ensureFileHasEnoughBlocks(int writeBytes) throws IOException {
+        ensureIsOpen();
+
         var neededCapacity = writeBytes + currentPosition;
         var neededBlocks = (int) Math.ceil(neededCapacity / (1.0 * BlockFileHead.BLOCK_SIZE));
         var blocksToAllocate = neededBlocks - fileHead.getBlocks().size();
@@ -75,6 +79,8 @@ public class BlockFileByteChannel implements SeekableByteChannel {
 
     @Override
     public int write(ByteBuffer src) throws IOException {
+        ensureIsOpen();
+
         var bytesWritten = 0;
         var startingPosition = currentPosition;
 
@@ -109,11 +115,15 @@ public class BlockFileByteChannel implements SeekableByteChannel {
 
     @Override
     public long position() throws IOException {
+        ensureIsOpen();
+
         return currentPosition;
     }
 
     @Override
     public SeekableByteChannel position(long newPosition) throws IOException {
+        ensureIsOpen();
+
         if(newPosition > Integer.MAX_VALUE)
             currentPosition = Integer.MAX_VALUE;
         else
@@ -124,6 +134,8 @@ public class BlockFileByteChannel implements SeekableByteChannel {
 
     @Override
     public long size() throws IOException {
+        ensureIsOpen();
+
         return fileHead.getByteCount();
     }
 
@@ -138,7 +150,12 @@ public class BlockFileByteChannel implements SeekableByteChannel {
     }
 
     @Override
-    public void close() throws IOException {
+    public void close() {
         this.isOpen = false;
+    }
+
+    private void ensureIsOpen() throws IOException {
+        if(!isOpen())
+            throw new IOException("Channel is closed");
     }
 }
