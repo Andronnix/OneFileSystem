@@ -10,6 +10,10 @@ import java.util.Map;
 import java.util.Set;
 
 public interface OFSController {
+    boolean isOpen();
+
+    void close() throws IOException;
+
     SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException;
 
     DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) throws IOException;

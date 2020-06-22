@@ -25,12 +25,12 @@ public class OFSFileSystem extends FileSystem {
 
     @Override
     public void close() throws IOException {
-        throw new UnsupportedOperationException();
+        provider.close();
     }
 
     @Override
     public boolean isOpen() {
-        return true;
+        return provider.isOpen();
     }
 
     @Override

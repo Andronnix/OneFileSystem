@@ -21,6 +21,14 @@ public class OFSFileSystemProvider extends FileSystemProvider {
     static final String ROOT = "]=";
     static final String SCHEME = "ofs";
 
+    public void close() throws IOException {
+        controller.close();
+    }
+
+    public boolean isOpen() {
+        return controller.isOpen();
+    }
+
     @Override
     public String getScheme() {
         return SCHEME;

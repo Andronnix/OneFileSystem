@@ -29,6 +29,21 @@ public class BlockFileController implements OFSController {
         this.fileTree = new OFSTree<>(new BlockFileHead("", true, rootBlock.get()));
     }
 
+    @Override
+    public boolean isOpen() {
+        return channel.isOpen();
+    }
+
+    @Override
+    public void close() throws IOException {
+        channel.close();
+    }
+
+    void ensureBaseFileIsOpen() throws IOException {
+        if(!channel.isOpen())
+            throw new IOException("Base file channel is not open");
+    }
+
     private BlockFileHead allocateHead(@NotNull String name, boolean isDirectory) throws IOException {
         var headBlock = blockManager.allocateBlock();
         if(headBlock.isEmpty())
@@ -69,6 +84,8 @@ public class BlockFileController implements OFSController {
 
     @Override
     public SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
+        ensureBaseFileIsOpen();
+
         var node = fileTree.getNode(path);
         if(node != null) {
             if(node.isDirectory()) {
@@ -89,6 +106,8 @@ public class BlockFileController implements OFSController {
 
     @Override
     public DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) throws IOException {
+        ensureBaseFileIsOpen();
+
         var dirNode = fileTree.getNode(dir);
 
         if(dirNode == null) {
@@ -132,11 +151,15 @@ public class BlockFileController implements OFSController {
 
     @Override
     public boolean exists(Path path) throws IOException {
+        ensureBaseFileIsOpen();
+
         return fileTree.exists(path);
     }
 
     @Override
     public void createDirectory(Path dir, FileAttribute<?>... attrs) throws IOException {
+        ensureBaseFileIsOpen();
+
         if(fileTree.exists(dir)) {
             throw new FileAlreadyExistsException(dir.toString());
         }
@@ -155,6 +178,8 @@ public class BlockFileController implements OFSController {
 
     @Override
     public void delete(Path path) throws IOException {
+        ensureBaseFileIsOpen();
+
         if(!fileTree.exists(path)) {
             throw new NoSuchFileException(path.toString());
         }
@@ -170,6 +195,8 @@ public class BlockFileController implements OFSController {
 
     @Override
     public void copy(Path source, Path target, CopyOption... options) throws IOException {
+        ensureBaseFileIsOpen();
+
         if(!fileTree.exists(source)) {
             throw new NoSuchFileException(source.toString());
         }
@@ -203,6 +230,8 @@ public class BlockFileController implements OFSController {
 
     @Override
     public void move(Path source, Path target, CopyOption... options) throws IOException {
+        ensureBaseFileIsOpen();
+
         if(!fileTree.exists(source)) {
             throw new NoSuchFileException(source.toString());
         }
@@ -220,6 +249,9 @@ public class BlockFileController implements OFSController {
 
     @Override
     public <V extends FileAttributeView> V getFileAttributeView(Path path, Class<V> type, LinkOption... options) {
+        if(!isOpen())
+            return null;
+
         if (type == null)
             throw new NullPointerException();
 
@@ -231,6 +263,8 @@ public class BlockFileController implements OFSController {
 
     @Override
     public <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options) throws IOException {
+        ensureBaseFileIsOpen();
+
         if (type == null)
             throw new NullPointerException();
 
@@ -242,10 +276,13 @@ public class BlockFileController implements OFSController {
 
     @Override
     public Map<String, Object> readAttributes(Path path, String attributes, LinkOption... options) throws IOException {
+        ensureBaseFileIsOpen();
+
         return new BlockFileAttributes(fileTree.getNode(path).getFile()).toMap();
     }
 
     @Override
     public void setAttribute(Path path, String attribute, Object value, LinkOption... options) throws IOException {
+        ensureBaseFileIsOpen();
     }
 }
