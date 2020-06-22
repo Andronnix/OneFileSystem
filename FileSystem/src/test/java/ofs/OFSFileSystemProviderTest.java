@@ -58,6 +58,46 @@ public class OFSFileSystemProviderTest {
         inputStream.close();
     }
 
+    @Test
+    public void writesFileSystemWithComplexDirStructureToFile() throws IOException {
+        var basePath = Files.createTempFile("test", "test");
+
+        var provider = new OFSFileSystemProvider();
+        var fs = provider.newFileSystem(URI.create("ofs:]=$"), Map.of("basePath", basePath));
+
+        provider.createDirectory(fs.getPath("dir"));
+        provider.createDirectory(fs.getPath("dir", "inner"));
+        provider.createDirectory(fs.getPath("dir", "inner2"));
+        provider.createDirectory(fs.getPath("dir", "inner2", "deep1"));
+        provider.createDirectory(fs.getPath("dir", "inner2", "deep2"));
+        provider.createDirectory(fs.getPath("dir", "inner3"));
+        provider.createDirectory(fs.getPath("another_dir"));
+        provider.createDirectory(fs.getPath("another_dir", "inner"));
+
+        var file = fs.getPath("dir", "inner2", "deep2", "some_file");
+        provider.newByteChannel(file, Set.of(StandardOpenOption.CREATE, StandardOpenOption.WRITE));
+
+        var file2 = fs.getPath("another_dir", "inner", "some_file2");
+        provider.newByteChannel(file2, Set.of(StandardOpenOption.CREATE, StandardOpenOption.WRITE));
+
+        fs.close();
+        provider = null;
+
+        var newProvider = new OFSFileSystemProvider();
+        var newFs = newProvider.newFileSystem(URI.create("ofs:]=$"), Map.of("basePath", basePath));
+
+        var root = newFs.getPath("]=");
+        newProvider.checkAccess(root.resolve("dir"));
+        newProvider.checkAccess(root.resolve("dir").resolve("inner"));
+        newProvider.checkAccess(root.resolve("dir").resolve("inner2"));
+        newProvider.checkAccess(root.resolve("dir").resolve("inner2").resolve("deep2"));
+        newProvider.checkAccess(root.resolve("dir").resolve("inner2").resolve("deep2").resolve("some_file"));
+        newProvider.checkAccess(root.resolve("dir").resolve("inner3"));
+        newProvider.checkAccess(root.resolve("another_dir"));
+        newProvider.checkAccess(root.resolve("another_dir").resolve("inner"));
+        newProvider.checkAccess(root.resolve("another_dir").resolve("inner").resolve("some_file2"));
+    }
+
 
     @Test(expected = IllegalArgumentException.class)
     public void refusesToCreateNonOFSFileSystem() throws IOException {
