@@ -96,8 +96,8 @@ public class BlockFileControllerTest {
         var bc = controller.newByteChannel(file, Set.of(StandardOpenOption.CREATE));
         var outputStream = Channels.newOutputStream(bc);
 
-        var megaByte = 1024 * 1024;
-        for(int i = 0; i < megaByte; i++) { //1 megabyte
+        var largeFileSize = 200 * 1024;
+        for(int i = 0; i < largeFileSize; i++) {
             outputStream.write(magicNumber);
         }
         outputStream.close();
@@ -106,7 +106,7 @@ public class BlockFileControllerTest {
         var copyBc = controller.newByteChannel(file, Set.of(StandardOpenOption.READ));
         var inputStream = Channels.newInputStream(copyBc);
 
-        for(int i = 0; i < megaByte; i++) { //1 megabyte
+        for(int i = 0; i < largeFileSize; i++) { //1 megabyte
             Assert.assertEquals(magicNumber, inputStream.read());
         }
         Assert.assertEquals(0, inputStream.available());

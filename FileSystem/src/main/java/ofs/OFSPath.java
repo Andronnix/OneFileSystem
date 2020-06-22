@@ -12,6 +12,7 @@ import java.util.StringTokenizer;
 import java.util.regex.Pattern;
 
 public class OFSPath implements Path {
+    public static final int MAX_NAME_LENGTH = 128;
     private final List<String> path;
     private final OFSFileSystem fs;
     private final boolean isAbsolute;
@@ -63,6 +64,12 @@ public class OFSPath implements Path {
                 throw new InvalidPathException(
                         String.join(OFSFileSystem.SEPARATOR, pathNames),
                         String.format("Illegal name %s", name)
+                );
+
+            if(name.length() > MAX_NAME_LENGTH)
+                throw new InvalidPathException(
+                        String.join(OFSFileSystem.SEPARATOR, pathNames),
+                        String.format("Name too long %s", name)
                 );
         }
     }

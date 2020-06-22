@@ -67,6 +67,10 @@ public class BlockFileByteChannel implements SeekableByteChannel {
         if(blocksToAllocate <= 0)
             return;
 
+        if(neededBlocks > BlockFileHead.getMaxContentBlockCount(blockManager.getBlockSize())) {
+            throw new IOException("Too large file");
+        }
+
         var blocks = blockManager.allocateBlocks(blocksToAllocate);
         if(blocks.isEmpty()) {
             throw new IOException("Couldn't allocate enough space");

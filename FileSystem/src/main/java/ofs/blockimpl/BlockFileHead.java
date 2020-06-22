@@ -1,5 +1,6 @@
 package ofs.blockimpl;
 
+import ofs.OFSPath;
 import ofs.controller.OFSFileHead;
 import org.jetbrains.annotations.NotNull;
 
@@ -21,6 +22,18 @@ public class BlockFileHead implements OFSFileHead {
         }
 
         return result;
+    }
+
+    public static int getMaxContentBlockCount(int blockSize) {
+        var spaceAvailableForBlocksList = blockSize;
+        spaceAvailableForBlocksList -= 4; // name size;
+        spaceAvailableForBlocksList -= OFSPath.MAX_NAME_LENGTH; // name length;
+        spaceAvailableForBlocksList -= 4; // self block address;
+        spaceAvailableForBlocksList -= 4; // self content byte count;
+        spaceAvailableForBlocksList -= 1; // is directory;
+        spaceAvailableForBlocksList -= 4; // blocks count;
+
+        return spaceAvailableForBlocksList / 4;
     }
 
     public BlockFileHead(String name, boolean isDirectory, int address) {
