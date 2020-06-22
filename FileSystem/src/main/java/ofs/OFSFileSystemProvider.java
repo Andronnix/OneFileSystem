@@ -46,7 +46,14 @@ public class OFSFileSystemProvider extends FileSystemProvider {
             );
         }
 
-        controller = new BlockFileController(Files.createTempFile("ofs", "sfo"));
+        var shouldDeserialize = env.containsKey("deserialize") ? (Boolean) env.get("deserialize") : false;
+        if(shouldDeserialize && !env.containsKey("basePath")) {
+            throw new IllegalArgumentException("Base path must be provided to deserialize fs");
+        }
+
+        var baseFile = env.containsKey("basePath") ? (Path) env.get("basePath") : Files.createTempFile("ofs", "sfo");
+
+        controller = new BlockFileController(baseFile, shouldDeserialize);
         fileSystem = new OFSFileSystem(this);
 
         return fileSystem;

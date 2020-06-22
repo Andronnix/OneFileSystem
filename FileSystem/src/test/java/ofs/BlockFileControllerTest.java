@@ -18,7 +18,7 @@ public class BlockFileControllerTest {
 
     @Before
     public void createController() throws IOException {
-        controller = new BlockFileController(Files.createTempFile("test", "test"));
+        controller = new BlockFileController(Files.createTempFile("test", "test"), false);
     }
 
     @Test
@@ -96,11 +96,12 @@ public class BlockFileControllerTest {
         var bc = controller.newByteChannel(file, Set.of(StandardOpenOption.CREATE));
         var outputStream = Channels.newOutputStream(bc);
 
-        var megaByte = 1024 * 1024;
+        var megaByte = 250 * 1024;
         for(int i = 0; i < megaByte; i++) { //1 megabyte
             outputStream.write(magicNumber);
         }
         outputStream.close();
+        bc.close();
 
         var copyBc = controller.newByteChannel(file, Set.of(StandardOpenOption.READ));
         var inputStream = Channels.newInputStream(copyBc);

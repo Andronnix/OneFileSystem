@@ -15,8 +15,7 @@ public class BlockFileHeadTest {
 
         head.setByteCount(99);
 
-        var serialized = head.toByteBuffer(); serialized.flip();
-
+        var serialized = head.toByteBuffer();
         BlockFileHead deserialized = new BlockFileHead(serialized);
 
         Assert.assertFalse(deserialized.isDirectory());

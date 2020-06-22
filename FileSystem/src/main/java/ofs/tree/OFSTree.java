@@ -13,6 +13,10 @@ public class OFSTree <H extends OFSFileHead> {
         this.root = new OFSTreeNode<>(root);
     }
 
+    public OFSTreeNode<H> getRoot() {
+        return this.root;
+    }
+
     /**
      * Returns a node, corresponding to the given path, null otherwise.
      */

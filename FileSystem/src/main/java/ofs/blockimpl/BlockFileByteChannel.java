@@ -39,13 +39,13 @@ public class BlockFileByteChannel implements SeekableByteChannel {
             block.flip();
             block.position(offset);
 
-            if(dst.remaining() >= readBytes) {
+            if(dst.remaining() >= readBytes && currentPosition + readBytes < fileSize) {
                 dst.put(block);
 
                 count += readBytes;
                 currentPosition += readBytes;
             } else {
-                while(dst.hasRemaining()) {
+                while(dst.hasRemaining() && currentPosition < fileSize) {
                     dst.put(block.get());
                     count++;
                     currentPosition++;
@@ -77,6 +77,13 @@ public class BlockFileByteChannel implements SeekableByteChannel {
         }
     }
 
+    private void ensureUnderlyingChannelPosition() throws IOException {
+        var offset = currentPosition % BlockFileHead.BLOCK_SIZE;
+        var currentBlock = currentPosition / BlockFileHead.BLOCK_SIZE;
+
+        channel.position(fileHead.getBlocks().get(currentBlock) * BlockFileHead.BLOCK_SIZE + offset);
+    }
+
     @Override
     public int write(ByteBuffer src) throws IOException {
         ensureIsOpen();
@@ -88,14 +95,11 @@ public class BlockFileByteChannel implements SeekableByteChannel {
 
         ByteBuffer buffer = ByteBuffer.allocate(BlockFileHead.BLOCK_SIZE);
         while(src.hasRemaining()) {
-            var bytesLeftInCurrentBlock = BlockFileHead.BLOCK_SIZE - currentPosition % BlockFileHead.BLOCK_SIZE;
+            var remainingBytesInCurrentBLock = BlockFileHead.BLOCK_SIZE - currentPosition % BlockFileHead.BLOCK_SIZE;
 
-            if(bytesLeftInCurrentBlock == BlockFileHead.BLOCK_SIZE) {
-                var currentBlock = currentPosition / BlockFileHead.BLOCK_SIZE;
-                channel.position(fileHead.getBlocks().get(currentBlock) * BlockFileHead.BLOCK_SIZE);
-            }
+            ensureUnderlyingChannelPosition();
 
-            var bytesToWrite = Math.min(src.remaining(), bytesLeftInCurrentBlock);
+            var bytesToWrite = Math.min(src.remaining(), remainingBytesInCurrentBLock);
             for(int i = 0; i < bytesToWrite; i++) {
                 buffer.put(src.get());
             }
@@ -108,7 +112,10 @@ public class BlockFileByteChannel implements SeekableByteChannel {
             buffer.clear();
         }
 
-        fileHead.setByteCount(startingPosition + bytesWritten);
+        fileHead.setByteCount(Math.max(startingPosition + bytesWritten, fileHead.getByteCount()));
+
+        channel.position(fileHead.getAddress() * BlockFileHead.BLOCK_SIZE);
+        channel.write(fileHead.toByteBuffer());
 
         return bytesWritten;
     }

@@ -87,6 +87,8 @@ public class BlockFileHead implements OFSFileHead {
             result.putInt(block);
         }
 
+        result.flip();
+
         return result;
     }
 

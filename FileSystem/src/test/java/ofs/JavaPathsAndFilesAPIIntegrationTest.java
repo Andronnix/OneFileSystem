@@ -95,7 +95,8 @@ public class JavaPathsAndFilesAPIIntegrationTest {
         Assert.assertTrue(Files.exists(src));
         Assert.assertTrue(Files.exists(dest));
         Assert.assertEquals(content, Files.readString(src));
-        Assert.assertEquals(content, Files.readString(dest));
+        var destStr = Files.readString(dest);
+        Assert.assertEquals(content, destStr);
     }
 
     @Test

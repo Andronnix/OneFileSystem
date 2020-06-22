@@ -19,29 +19,36 @@ public class BlockFileController implements OFSController {
     private final BlockManager blockManager = new BlockManager(MAX_BLOCKS);
     private final OFSTree<BlockFileHead> fileTree;
 
-    public BlockFileController(Path baseFile) throws IOException {
-        // TODO read head from base File
+    public BlockFileController(@NotNull Path baseFile, boolean shouldDeserialize) throws IOException {
         this.channel = Files.newByteChannel(baseFile, Set.of(StandardOpenOption.READ, StandardOpenOption.WRITE));
-        var rootBlock = blockManager.allocateBlock();
-        if(rootBlock.isEmpty())
-            throw new IOException();
 
-        this.fileTree = new OFSTree<>(new BlockFileHead("", true, rootBlock.get()));
+        if(shouldDeserialize) {
+            this.fileTree = deserializeTree();
+        } else {
+            var rootBlock = blockManager.allocateBlock();
+            if (rootBlock.isEmpty())
+                throw new IOException();
+
+            var rootHead = new BlockFileHead("", true, rootBlock.get());
+            this.fileTree = new OFSTree<>(rootHead);
+
+            serializeDirectory(this.fileTree.getRoot());
+        }
     }
 
-    @Override
-    public boolean isOpen() {
-        return channel.isOpen();
-    }
+    private OFSTree<BlockFileHead> deserializeTree() throws IOException {
+        var buffer = ByteBuffer.allocate(BlockFileHead.BLOCK_SIZE);
+        channel.position(0);
+        channel.read(buffer);
 
-    @Override
-    public void close() throws IOException {
-        channel.close();
-    }
+        buffer.flip();
+        var root = new BlockFileHead(buffer);
 
-    void ensureBaseFileIsOpen() throws IOException {
-        if(!channel.isOpen())
-            throw new IOException("Base file channel is not open");
+        var fileTree = new OFSTree<>(root);
+
+        deserializeDirectory(fileTree.getRoot());
+
+        return fileTree;
     }
 
     private BlockFileHead allocateHead(@NotNull String name, boolean isDirectory) throws IOException {
@@ -49,10 +56,34 @@ public class BlockFileController implements OFSController {
         if(headBlock.isEmpty())
             throw new IOException("Couldn't create new file, not enough space.");
 
-        return new BlockFileHead(name, isDirectory, headBlock.get());
+        var fileHead = new BlockFileHead(name, isDirectory, headBlock.get());
+        if(isDirectory) {
+            var block = blockManager.allocateBlock();
+            if(block.isEmpty())
+                throw new IOException("Couldn't create new file, not enough space.");
+
+            fileHead.expand(block.get());
+            fileHead.setByteCount(4); // One int for contents length
+        }
+
+        return fileHead;
     }
 
-    private ByteBuffer getDirectoryContents(OFSTreeNode<BlockFileHead> dir) {
+    private void serializeDirectory(@NotNull OFSTreeNode<BlockFileHead> dir) throws IOException {
+        if(!dir.isDirectory()) {
+            throw new IllegalArgumentException();
+        }
+
+        var contentBuffer = serializeDirectoryChildrenList(dir);
+        var bc = new BlockFileByteChannel(channel, dir.getFile(), blockManager);
+        bc.write(contentBuffer);
+
+        var headBuffer = dir.getFile().toByteBuffer();
+        channel.position(dir.getFile().getAddress() * BlockFileHead.BLOCK_SIZE);
+        channel.write(headBuffer);
+    }
+
+    private ByteBuffer serializeDirectoryChildrenList(OFSTreeNode<BlockFileHead> dir) {
         if(!dir.isDirectory()) {
             throw new IllegalArgumentException();
         }
@@ -69,7 +100,41 @@ public class BlockFileController implements OFSController {
             buffer.putInt(c.getFile().getAddress());
         }
 
+        buffer.flip();
+
         return buffer;
+    }
+
+    private void deserializeDirectory(OFSTreeNode<BlockFileHead> dir) throws IOException {
+        if(!dir.isDirectory()) {
+            throw new IllegalArgumentException();
+        }
+
+        var countBuffer = ByteBuffer.allocate(4);
+        var bc = new BlockFileByteChannel(channel, dir.getFile(), blockManager);
+        bc.read(countBuffer);
+        countBuffer.flip();
+        var childrenCount = countBuffer.getInt();
+
+        var childrenBuffer = ByteBuffer.allocate(childrenCount * 4);
+        bc.read(childrenBuffer); childrenBuffer.flip();
+        bc.close();
+
+        var headBuffer = ByteBuffer.allocate(BlockFileHead.BLOCK_SIZE);
+        for(int i = 0; i < childrenCount; i++) {
+            var childBlock = childrenBuffer.getInt();
+            channel.position(childBlock * BlockFileHead.BLOCK_SIZE);
+            channel.read(headBuffer); headBuffer.flip();
+
+            var childHead = new BlockFileHead(headBuffer);
+
+            dir.addChild(new OFSTreeNode<>(childHead));
+            headBuffer.clear();
+        }
+
+        for(var childDir : dir.getChildDirectories()) {
+            deserializeDirectory(childDir);
+        }
     }
 
     private void updateParentDirectory(@NotNull Path child) throws IOException {
@@ -77,9 +142,7 @@ public class BlockFileController implements OFSController {
         if(parent == null)
             throw new IllegalArgumentException();
 
-        var buffer = getDirectoryContents(parent);
-        var bc = new BlockFileByteChannel(channel, parent.getFile(), blockManager);
-        bc.write(buffer);
+        serializeDirectory(parent);
     }
 
     @Override
@@ -98,6 +161,9 @@ public class BlockFileController implements OFSController {
         if(!fileTree.addNode(path, head)) {
             throw new IllegalArgumentException();
         }
+
+        channel.position(head.getAddress() * BlockFileHead.BLOCK_SIZE);
+        channel.write(head.toByteBuffer());
 
         updateParentDirectory(path);
 
@@ -173,6 +239,8 @@ public class BlockFileController implements OFSController {
             throw new IllegalArgumentException();
         }
 
+        channel.position(head.getAddress() * BlockFileHead.BLOCK_SIZE);
+        channel.write(head.toByteBuffer());
         updateParentDirectory(dir);
     }
 
@@ -284,5 +352,20 @@ public class BlockFileController implements OFSController {
     @Override
     public void setAttribute(Path path, String attribute, Object value, LinkOption... options) throws IOException {
         ensureBaseFileIsOpen();
+    }
+
+    @Override
+    public boolean isOpen() {
+        return channel.isOpen();
+    }
+
+    @Override
+    public void close() throws IOException {
+        channel.close();
+    }
+
+    void ensureBaseFileIsOpen() throws IOException {
+        if(!channel.isOpen())
+            throw new IOException("Base file channel is not open");
     }
 }

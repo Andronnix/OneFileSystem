@@ -66,7 +66,7 @@ public class OFSFileSystemProviderTest {
         Assert.assertTrue(Files.size(basePath) >= 10);
 
         var newProvider = new OFSFileSystemProvider();
-        var newFs = newProvider.newFileSystem(URI.create("ofs:]=$"), Map.of("basePath", basePath));
+        var newFs = newProvider.newFileSystem(URI.create("ofs:]=$"), Map.of("basePath", basePath, "deserialize", true));
         var newFile = newFs.getPath("dir", "some_file");
         var newBc = newProvider.newByteChannel(newFile, Set.of(StandardOpenOption.READ));
 
@@ -105,7 +105,7 @@ public class OFSFileSystemProviderTest {
         provider = null;
 
         var newProvider = new OFSFileSystemProvider();
-        var newFs = newProvider.newFileSystem(URI.create("ofs:]=$"), Map.of("basePath", basePath));
+        var newFs = newProvider.newFileSystem(URI.create("ofs:]=$"), Map.of("basePath", basePath, "deserialize", true));
 
         var root = newFs.getPath("]=");
         newProvider.checkAccess(root.resolve("dir"));
