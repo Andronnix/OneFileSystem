@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.StringTokenizer;
+import java.util.regex.Pattern;
 
 public class OFSPath implements Path {
     private final List<String> path;
@@ -16,19 +17,20 @@ public class OFSPath implements Path {
     private final boolean isAbsolute;
 
     /**
-     * Constructs OFSPath from list of names. Doesn't check for path validity!
+     * Constructs OFSPath from list of names.
      * @param pathNames List, containing valid names.
      * @param fs OFSFileSystem instance this path is attached to.
      * @param isAbsolute Indicates whether this path is absolute or relative.
      */
     OFSPath(@NotNull List<String> pathNames, @NotNull OFSFileSystem fs, boolean isAbsolute) {
+        checkIsValidPath(pathNames);
         this.path = pathNames;
         this.fs = fs;
         this.isAbsolute = isAbsolute;
     }
 
     /**
-     * Constructs OFSPath from it's string representation. Doesn't check for path validity!
+     * Constructs OFSPath from it's string representation.
      * @param representation Path represented as as String, e.g. obtained by uri.getSchemeSpecificPart().
      * @param fs OFSFileSystem instance this path is attached to.
      */
@@ -48,8 +50,21 @@ public class OFSPath implements Path {
             this.isAbsolute = false;
         }
 
+        checkIsValidPath(pathNames);
         this.path = pathNames;
         this.fs = fs;
+    }
+
+    private void checkIsValidPath(List<String> pathNames) {
+        Pattern p = Pattern.compile("[\\w,.\\-]+");
+
+        for(var name : pathNames) {
+            if(!p.matcher(name).matches())
+                throw new InvalidPathException(
+                        String.join(OFSFileSystem.SEPARATOR, pathNames),
+                        String.format("Illegal name %s", name)
+                );
+        }
     }
 
     @NotNull

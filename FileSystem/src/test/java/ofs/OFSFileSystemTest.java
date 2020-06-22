@@ -62,7 +62,7 @@ public class OFSFileSystemTest {
     public void doesntConstructWrongPath() {
         var fs = FileSystems.getFileSystem(URI.create("ofs:]=$"));
 
-        fs.getPath("a$$b");
+        fs.getPath("a$$b%");
     }
 
     @Test
