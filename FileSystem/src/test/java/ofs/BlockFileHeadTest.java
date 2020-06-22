@@ -7,7 +7,7 @@ import org.junit.Test;
 public class BlockFileHeadTest {
     @Test
     public void canSerializeAndDeserialize() {
-        BlockFileHead head = new BlockFileHead("test", false);
+        BlockFileHead head = new BlockFileHead("test", false, 0);
 
         for(int i = 99; i >= 0; i--) {
             head.expand(i);

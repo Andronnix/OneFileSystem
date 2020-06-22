@@ -6,6 +6,7 @@ import ofs.tree.OFSTreeNode;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
+import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.*;
@@ -13,17 +14,58 @@ import java.nio.file.attribute.*;
 import java.util.*;
 
 public class BlockFileController implements OFSController {
-    private static final int MAX_BLOCKS = 1024;
+    private static final int MAX_BLOCKS = 1024 * 1024;
     private final SeekableByteChannel channel;
     private final BlockManager blockManager = new BlockManager(MAX_BLOCKS);
     private final OFSTree<BlockFileHead> fileTree;
 
     public BlockFileController(Path baseFile) throws IOException {
+        // TODO read head from base File
         this.channel = Files.newByteChannel(baseFile, Set.of(StandardOpenOption.READ, StandardOpenOption.WRITE));
-        this.fileTree = new OFSTree<>(new BlockFileHead("", true));
+        var rootBlock = blockManager.allocateBlock();
+        if(rootBlock.isEmpty())
+            throw new IOException();
+
+        this.fileTree = new OFSTree<>(new BlockFileHead("", true, rootBlock.get()));
     }
 
+    private BlockFileHead allocateHead(@NotNull String name, boolean isDirectory) throws IOException {
+        var headBlock = blockManager.allocateBlock();
+        if(headBlock.isEmpty())
+            throw new IOException("Couldn't create new file, not enough space.");
 
+        return new BlockFileHead(name, isDirectory, headBlock.get());
+    }
+
+    private ByteBuffer getDirectoryContents(OFSTreeNode<BlockFileHead> dir) {
+        if(!dir.isDirectory()) {
+            throw new IllegalArgumentException();
+        }
+
+        var children = dir.getAllChildren();
+
+        var buffer = ByteBuffer.allocate(
+                4 + // Children.size()
+                children.size() * 4 // Block address of each child
+        );
+
+        buffer.putInt(children.size());
+        for(var c : children) {
+            buffer.putInt(c.getFile().getAddress());
+        }
+
+        return buffer;
+    }
+
+    private void updateParentDirectory(@NotNull Path child) throws IOException {
+        var parent = fileTree.getParentNode(child);
+        if(parent == null)
+            throw new IllegalArgumentException();
+
+        var buffer = getDirectoryContents(parent);
+        var bc = new BlockFileByteChannel(channel, parent.getFile(), blockManager);
+        bc.write(buffer);
+    }
 
     @Override
     public SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
@@ -35,14 +77,14 @@ public class BlockFileController implements OFSController {
             return new BlockFileByteChannel(channel, node.getFile(), blockManager);
         }
 
-        // File exists
-        var head = new BlockFileHead(path.getFileName().toString(), false);
+        var head = allocateHead(path.getFileName().toString(), false);
         if(!fileTree.addNode(path, head)) {
             throw new IllegalArgumentException();
         }
 
-        return new BlockFileByteChannel(channel
-                , head, blockManager);
+        updateParentDirectory(path);
+
+        return new BlockFileByteChannel(channel, head, blockManager);
     }
 
     @Override
@@ -103,10 +145,12 @@ public class BlockFileController implements OFSController {
         if(parent == null)
             throw new NoSuchFileException(dir.toString());
 
-        var head = new BlockFileHead(dir.getFileName().toString(), true);
+        var head = allocateHead(dir.getFileName().toString(), true);
         if(!fileTree.addNode(dir, head)) {
             throw new IllegalArgumentException();
         }
+
+        updateParentDirectory(dir);
     }
 
     @Override
@@ -120,6 +164,8 @@ public class BlockFileController implements OFSController {
         for(var block : h.getBlocks()) {
             blockManager.freeBlock(block);
         }
+
+        updateParentDirectory(path);
     }
 
     @Override
@@ -151,6 +197,8 @@ public class BlockFileController implements OFSController {
         var sourceStream = Channels.newInputStream(newByteChannel(source, Set.of(StandardOpenOption.READ)));
 
         sourceStream.transferTo(targetStream);
+
+        updateParentDirectory(target);
     }
 
     @Override
@@ -159,9 +207,15 @@ public class BlockFileController implements OFSController {
             throw new NoSuchFileException(source.toString());
         }
 
-        BlockFileHead head = fileTree.deleteNode(source).copyWithName(target.getFileName().toString());
+        var newHeadBlock = blockManager.allocateBlock();
+        if(newHeadBlock.isEmpty())
+            throw new IOException("Couldn't create new file, not enough space.");
+        BlockFileHead head = fileTree.deleteNode(source).copyWithName(target.getFileName().toString(), newHeadBlock.get());
 
         fileTree.addNode(target, head);
+
+        updateParentDirectory(source);
+        updateParentDirectory(target);
     }
 
     @Override

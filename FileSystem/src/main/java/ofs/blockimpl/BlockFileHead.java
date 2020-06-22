@@ -8,14 +8,15 @@ import java.util.ArrayList;
 
 public class BlockFileHead implements OFSFileHead {
     public static int BLOCK_SIZE = 1024;
+    private final int address;
     private final String name;
     private final ArrayList<Integer> blocks = new ArrayList<>();
     private final boolean isDirectory;
 
     private int byteCount = 0;
 
-    public BlockFileHead copyWithName(@NotNull String newName) {
-        var result = new BlockFileHead(newName, isDirectory);
+    public BlockFileHead copyWithName(@NotNull String newName, int newAddress) {
+        var result = new BlockFileHead(newName, isDirectory, newAddress);
         for(var b : blocks) {
             result.expand(b);
         }
@@ -23,9 +24,10 @@ public class BlockFileHead implements OFSFileHead {
         return result;
     }
 
-    public BlockFileHead(String name, boolean isDirectory) {
+    public BlockFileHead(String name, boolean isDirectory, int address) {
         this.name = name;
         this.isDirectory = isDirectory;
+        this.address = address;
     }
 
     public BlockFileHead(ByteBuffer in) {
@@ -34,6 +36,7 @@ public class BlockFileHead implements OFSFileHead {
 
         in.get(nameBytes);
         this.name = new String(nameBytes);
+        this.address = in.getInt();
         this.byteCount = in.getInt();
         this.isDirectory = in.get() > 0;
 
@@ -41,6 +44,10 @@ public class BlockFileHead implements OFSFileHead {
         for(int i = 0; i < blockCount; i++) {
             this.blocks.add(in.getInt());
         }
+    }
+
+    public int getAddress() {
+        return address;
     }
 
     public int getByteCount() {
@@ -64,6 +71,7 @@ public class BlockFileHead implements OFSFileHead {
 
         var result = ByteBuffer.allocate(
                 nameBytes.length + 4 // name + it's length
+                + 4 // address
                 + 4 // byteCount
                 + 1 // isDirectory
                 + 4 // blocksSize
@@ -71,6 +79,7 @@ public class BlockFileHead implements OFSFileHead {
         );
 
         result.putInt(nameBytes.length); result.put(nameBytes);
+        result.putInt(address);
         result.putInt(byteCount);
         result.put((byte) (isDirectory ? 1 : 0));
         result.putInt(blocks.size());
