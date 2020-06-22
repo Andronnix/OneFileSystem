@@ -129,7 +129,7 @@ public class BlockFileByteChannel implements SeekableByteChannel {
 
     @Override
     public SeekableByteChannel truncate(long size) throws IOException {
-        return null;
+        throw new UnsupportedOperationException("Not implemented");
     }
 
     @Override

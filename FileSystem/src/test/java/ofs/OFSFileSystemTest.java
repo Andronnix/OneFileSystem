@@ -18,6 +18,17 @@ public class OFSFileSystemTest {
     }
 
     @Test
+    public void canBeClosed() throws IOException {
+        var provider = new OFSFileSystemProvider();
+        var fs = provider.newFileSystem(URI.create("ofs:]=$"), Map.of());
+
+        Assert.assertTrue(fs.isOpen());
+        fs.close();
+
+        Assert.assertFalse(fs.isOpen());
+    }
+
+    @Test
     public void constructsPathFromSingleString() {
         var fs = FileSystems.getFileSystem(URI.create("ofs:]=$"));
 

@@ -12,10 +12,31 @@ import java.util.Set;
 
 public class OFSFileSystemProviderTest {
     @Test
-    public void createsOFSFileSystem() throws IOException {
+    public void createsOFSFileSystemInATempFile() throws IOException {
         var provider = new OFSFileSystemProvider();
 
-        Assert.assertNotNull(provider.newFileSystem(URI.create("ofs:]=$"), Map.of()));
+        var fs = provider.newFileSystem(URI.create("ofs:]=$"), Map.of());
+        Assert.assertNotNull(fs);
+        Assert.assertTrue(fs.isOpen());
+    }
+
+    @Test
+    public void createsOFSFileSystemInAProvidedFile() throws IOException {
+        var provider = new OFSFileSystemProvider();
+
+        var basePath = Files.createTempFile("test", "test");
+        var fs = provider.newFileSystem(URI.create("ofs:]=$"), Map.of("basePath", basePath));
+
+        var bc = provider.newByteChannel(Path.of(URI.create("ofs:]=$test")), Set.of(StandardOpenOption.CREATE, StandardOpenOption.WRITE));
+        var outputStream = Channels.newOutputStream(bc);
+        for(byte b = 0; b < 10; b++)
+            outputStream.write(b);
+        outputStream.close();
+        bc.close();
+
+        Assert.assertNotNull(fs);
+        Assert.assertTrue(fs.isOpen());
+        Assert.assertTrue(Files.size(basePath) >= 10);
     }
 
     /**
@@ -38,7 +59,7 @@ public class OFSFileSystemProviderTest {
         for(byte b = 0; b < 10; b++)
             outputStream.write(b);
         outputStream.close();
-
+        bc.close();
         fs.close();
         provider = null;
 
