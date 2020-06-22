@@ -151,24 +151,39 @@ public class BlockFileController implements OFSController {
         ensureBaseFileIsOpen();
 
         var node = fileTree.getNode(path);
-        if(node != null) {
-            if(node.isDirectory()) {
-                throw new IllegalArgumentException("Can't create byte channel from directory");
+        if(node != null && node.isDirectory()) {
+            throw new IllegalArgumentException("Can't create byte channel from directory");
+        }
+
+        if(node != null && options.contains(StandardOpenOption.CREATE_NEW)) {
+            throw new FileAlreadyExistsException(path.toString());
+        }
+
+        BlockFileHead head;
+        if(node == null) {
+            head = allocateHead(path.getFileName().toString(), false);
+            if(!fileTree.addNode(path, head)) {
+                throw new IllegalArgumentException();
             }
-            return new BlockFileByteChannel(channel, node.getFile(), blockManager);
+
+            channel.position(head.getAddress() * BLOCK_SIZE);
+            channel.write(head.toByteBuffer());
+
+            updateParentDirectory(path);
+        } else {
+            head = node.getFile();
         }
 
-        var head = allocateHead(path.getFileName().toString(), false);
-        if(!fileTree.addNode(path, head)) {
-            throw new IllegalArgumentException();
+        SeekableByteChannel bc = new BlockFileByteChannel(channel, head, blockManager);
+        if(options.contains(StandardOpenOption.APPEND)) {
+            bc = bc.position(bc.size());
         }
 
-        channel.position(head.getAddress() * BLOCK_SIZE);
-        channel.write(head.toByteBuffer());
+        if(options.contains(StandardOpenOption.TRUNCATE_EXISTING)) {
+            bc = bc.position(0);
+        }
 
-        updateParentDirectory(path);
-
-        return new BlockFileByteChannel(channel, head, blockManager);
+        return bc;
     }
 
     @Override

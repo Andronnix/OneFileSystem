@@ -125,7 +125,6 @@ public class BlockFileControllerTest {
         for(int i = 0; i < 10 * 1024; i++) {
             buffer.put(magicNumber);
         }
-        buffer.flip();
 
         for(int i = 0; i < megabytes; i++) {
             buffer.flip();

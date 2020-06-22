@@ -152,7 +152,24 @@ public class BlockFileByteChannel implements SeekableByteChannel {
 
     @Override
     public SeekableByteChannel truncate(long size) throws IOException {
-        throw new UnsupportedOperationException("Not implemented");
+        if(size < 0)
+            throw new IllegalArgumentException("Size must be positive.");
+
+        var newNeededBlocks = (int) Math.ceil(size / (1.0 * blockManager.getBlockSize()));
+        var oldBlocksCount = fileHead.getBlocks().size();
+
+        currentPosition = Math.min(currentPosition, (int) size);
+        if(newNeededBlocks < oldBlocksCount) {
+            var fileBlocks = fileHead.getBlocks();
+            for (int i = oldBlocksCount - 1; i >= newNeededBlocks; i--) {
+                var last = fileBlocks.get(i);
+                blockManager.freeBlock(last);
+
+                fileBlocks.remove(i);
+            }
+        }
+
+        return this;
     }
 
     @Override

@@ -22,10 +22,10 @@ public class BlockManager {
         return blockSize;
     }
 
-    public void freeBlock(int index) {
-        if(occupied[index]) {
+    public void freeBlock(int address) {
+        if(occupied[address]) {
             occupiedCount--;
-            occupied[index] = false;
+            occupied[address] = false;
         }
     }
 
