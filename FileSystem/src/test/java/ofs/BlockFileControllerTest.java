@@ -96,7 +96,7 @@ public class BlockFileControllerTest {
         var bc = controller.newByteChannel(file, Set.of(StandardOpenOption.CREATE));
         var outputStream = Channels.newOutputStream(bc);
 
-        var megaByte = 250 * 1024;
+        var megaByte = 1024 * 1024;
         for(int i = 0; i < megaByte; i++) { //1 megabyte
             outputStream.write(magicNumber);
         }
@@ -112,6 +112,26 @@ public class BlockFileControllerTest {
         Assert.assertEquals(0, inputStream.available());
 
         inputStream.close();
+    }
+
+    @Test(expected = IOException.class)
+    public void doesNotWriteTooLargeFiles() throws IOException {
+        byte magicNumber = 7;
+        var file = Path.of("file");
+        var bc = controller.newByteChannel(file, Set.of(StandardOpenOption.CREATE));
+
+        var megabytes = 10 * 1024;
+        var buffer = ByteBuffer.allocate(1024 * 1024); // 1 mb
+        for(int i = 0; i < 10 * 1024; i++) {
+            buffer.put(magicNumber);
+        }
+        buffer.flip();
+
+        for(int i = 0; i < megabytes; i++) {
+            buffer.flip();
+            bc.write(buffer);
+        }
+        bc.close();
     }
 
     @Test
