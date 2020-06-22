@@ -131,4 +131,37 @@ public class JavaPathsAndFilesAPIIntegrationTest {
 
         Assert.assertEquals(visitOrder.size(), realVisits.size());
     }
+
+    @Test
+    public void opensFileForAppend() throws IOException {
+        var file = Files.createFile(Paths.get(URI.create("ofs:]=$file_for_append")));
+
+        var pre = "pre";
+        var post = "post";
+        Files.writeString(file, pre);
+        Files.writeString(file, post, StandardOpenOption.APPEND);
+
+        Assert.assertEquals(pre + post, Files.readString(file));
+    }
+
+    @Test(expected = FileSystemAlreadyExistsException.class)
+    public void failsToOpensFileIfExists() throws IOException {
+        var file = Files.createFile(Paths.get(URI.create("ofs:]=$file_for_append")));
+
+        var pre = "pre";
+        Files.writeString(file, pre);
+        Files.writeString(file, pre, StandardOpenOption.CREATE_NEW);
+    }
+
+    @Test
+    public void truncatesFile() throws IOException {
+        var file = Files.createFile(Paths.get(URI.create("ofs:]=$file_for_append")));
+
+        var pre = "pre";
+        var post = "post";
+        Files.writeString(file, pre);
+        Files.writeString(file, post, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
+
+        Assert.assertEquals(post, Files.readString(file));
+    }
 }

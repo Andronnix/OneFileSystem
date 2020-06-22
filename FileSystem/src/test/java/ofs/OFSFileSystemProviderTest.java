@@ -136,7 +136,7 @@ public class OFSFileSystemProviderTest {
     }
 
     @Test(expected = FileSystemNotFoundException.class)
-    public void createsFileSystemOnlyWhenRequested() throws IOException {
+    public void createsFileSystemOnlyWhenRequested() {
         var provider = new OFSFileSystemProvider();
 
         provider.getFileSystem(URI.create("ofs:]=$"));
