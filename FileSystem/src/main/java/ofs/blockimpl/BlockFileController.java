@@ -14,9 +14,10 @@ import java.nio.file.attribute.*;
 import java.util.*;
 
 public class BlockFileController implements OFSController {
-    private static final int MAX_BLOCKS = 1024 * 1024;
+    public static int BLOCK_SIZE = 1024;
+    public static int MAX_SPACE = 1024 * 1024 * 1024; // Gigabyte
     private final SeekableByteChannel channel;
-    private final BlockManager blockManager = new BlockManager(MAX_BLOCKS);
+    private final BlockManager blockManager = new BlockManager(BLOCK_SIZE, MAX_SPACE);
     private final OFSTree<BlockFileHead> fileTree;
 
     public BlockFileController(@NotNull Path baseFile, boolean shouldDeserialize) throws IOException {
@@ -37,7 +38,7 @@ public class BlockFileController implements OFSController {
     }
 
     private OFSTree<BlockFileHead> deserializeTree() throws IOException {
-        var buffer = ByteBuffer.allocate(BlockFileHead.BLOCK_SIZE);
+        var buffer = ByteBuffer.allocate(BLOCK_SIZE);
         channel.position(0);
         channel.read(buffer);
 
@@ -79,7 +80,7 @@ public class BlockFileController implements OFSController {
         bc.write(contentBuffer);
 
         var headBuffer = dir.getFile().toByteBuffer();
-        channel.position(dir.getFile().getAddress() * BlockFileHead.BLOCK_SIZE);
+        channel.position(dir.getFile().getAddress() * BLOCK_SIZE);
         channel.write(headBuffer);
     }
 
@@ -120,10 +121,10 @@ public class BlockFileController implements OFSController {
         bc.read(childrenBuffer); childrenBuffer.flip();
         bc.close();
 
-        var headBuffer = ByteBuffer.allocate(BlockFileHead.BLOCK_SIZE);
+        var headBuffer = ByteBuffer.allocate(BLOCK_SIZE);
         for(int i = 0; i < childrenCount; i++) {
             var childBlock = childrenBuffer.getInt();
-            channel.position(childBlock * BlockFileHead.BLOCK_SIZE);
+            channel.position(childBlock * BLOCK_SIZE);
             channel.read(headBuffer); headBuffer.flip();
 
             var childHead = new BlockFileHead(headBuffer);
@@ -162,7 +163,7 @@ public class BlockFileController implements OFSController {
             throw new IllegalArgumentException();
         }
 
-        channel.position(head.getAddress() * BlockFileHead.BLOCK_SIZE);
+        channel.position(head.getAddress() * BLOCK_SIZE);
         channel.write(head.toByteBuffer());
 
         updateParentDirectory(path);
@@ -239,7 +240,7 @@ public class BlockFileController implements OFSController {
             throw new IllegalArgumentException();
         }
 
-        channel.position(head.getAddress() * BlockFileHead.BLOCK_SIZE);
+        channel.position(head.getAddress() * BLOCK_SIZE);
         channel.write(head.toByteBuffer());
         updateParentDirectory(dir);
     }

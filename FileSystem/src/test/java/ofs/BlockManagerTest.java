@@ -11,7 +11,9 @@ public class BlockManagerTest {
     @Test
     public void allowsToAllocateMaxBlocksInBulk() {
         var maxBlocks = 10;
-        var mgr = new BlockManager(maxBlocks);
+        var blockSize = 10;
+        var maxMem = blockSize * maxBlocks;
+        var mgr = new BlockManager(blockSize, maxMem);
 
         var blocks = mgr.allocateBlocks(maxBlocks);
         Assert.assertTrue(blocks.isPresent());
@@ -23,7 +25,9 @@ public class BlockManagerTest {
     @Test
     public void allowsToAllocateMaxBlocksOneByOne() {
         var maxBlocks = 10;
-        var mgr = new BlockManager(maxBlocks);
+        var blockSize = 10;
+        var maxMem = blockSize * maxBlocks;
+        var mgr = new BlockManager(blockSize, maxMem);
 
         var allocated = new HashSet<Integer>();
         for(int i = 0; i < maxBlocks; i++) {
@@ -39,7 +43,9 @@ public class BlockManagerTest {
     @Test
     public void allowsToAllocateChessBoard() {
         var maxBlocks = 10;
-        var mgr = new BlockManager(maxBlocks);
+        var blockSize = 10;
+        var maxMem = blockSize * maxBlocks;
+        var mgr = new BlockManager(blockSize, maxMem);
 
         var blocksOptional = mgr.allocateBlocks(maxBlocks);
         Assert.assertTrue(blocksOptional.isPresent());

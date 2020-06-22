@@ -28,11 +28,11 @@ public class BlockFileByteChannel implements SeekableByteChannel {
             return -1;
 
         int count = 0;
-        ByteBuffer block = ByteBuffer.allocate(BlockFileHead.BLOCK_SIZE);
+        ByteBuffer block = ByteBuffer.allocate(blockManager.getBlockSize());
         while(dst.hasRemaining() && currentPosition < fileSize) {
-            int offset = currentPosition % BlockFileHead.BLOCK_SIZE;
-            int currentBlock = currentPosition / BlockFileHead.BLOCK_SIZE;
-            int blockBeginPosition = fileHead.getBlocks().get(currentBlock) * BlockFileHead.BLOCK_SIZE;
+            int offset = currentPosition % blockManager.getBlockSize();
+            int currentBlock = currentPosition / blockManager.getBlockSize();
+            int blockBeginPosition = fileHead.getBlocks().get(currentBlock) * blockManager.getBlockSize();
             channel.position(blockBeginPosition);
 
             int readBytes = channel.read(block) - offset;
@@ -62,7 +62,7 @@ public class BlockFileByteChannel implements SeekableByteChannel {
         ensureIsOpen();
 
         var neededCapacity = writeBytes + currentPosition;
-        var neededBlocks = (int) Math.ceil(neededCapacity / (1.0 * BlockFileHead.BLOCK_SIZE));
+        var neededBlocks = (int) Math.ceil(neededCapacity / (1.0 * blockManager.getBlockSize()));
         var blocksToAllocate = neededBlocks - fileHead.getBlocks().size();
         if(blocksToAllocate <= 0)
             return;
@@ -78,10 +78,10 @@ public class BlockFileByteChannel implements SeekableByteChannel {
     }
 
     private void ensureUnderlyingChannelPosition() throws IOException {
-        var offset = currentPosition % BlockFileHead.BLOCK_SIZE;
-        var currentBlock = currentPosition / BlockFileHead.BLOCK_SIZE;
+        var offset = currentPosition % blockManager.getBlockSize();
+        var currentBlock = currentPosition / blockManager.getBlockSize();
 
-        channel.position(fileHead.getBlocks().get(currentBlock) * BlockFileHead.BLOCK_SIZE + offset);
+        channel.position(fileHead.getBlocks().get(currentBlock) * blockManager.getBlockSize() + offset);
     }
 
     @Override
@@ -93,9 +93,9 @@ public class BlockFileByteChannel implements SeekableByteChannel {
 
         ensureFileHasEnoughBlocks(src.remaining());
 
-        ByteBuffer buffer = ByteBuffer.allocate(BlockFileHead.BLOCK_SIZE);
+        ByteBuffer buffer = ByteBuffer.allocate(blockManager.getBlockSize());
         while(src.hasRemaining()) {
-            var remainingBytesInCurrentBLock = BlockFileHead.BLOCK_SIZE - currentPosition % BlockFileHead.BLOCK_SIZE;
+            var remainingBytesInCurrentBLock = blockManager.getBlockSize() - currentPosition % blockManager.getBlockSize();
 
             ensureUnderlyingChannelPosition();
 
@@ -114,7 +114,7 @@ public class BlockFileByteChannel implements SeekableByteChannel {
 
         fileHead.setByteCount(Math.max(startingPosition + bytesWritten, fileHead.getByteCount()));
 
-        channel.position(fileHead.getAddress() * BlockFileHead.BLOCK_SIZE);
+        channel.position(fileHead.getAddress() * blockManager.getBlockSize());
         channel.write(fileHead.toByteBuffer());
 
         return bytesWritten;

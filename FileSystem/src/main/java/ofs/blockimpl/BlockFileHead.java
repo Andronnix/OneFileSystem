@@ -7,7 +7,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 
 public class BlockFileHead implements OFSFileHead {
-    public static int BLOCK_SIZE = 1024;
     private final int address;
     private final String name;
     private final ArrayList<Integer> blocks = new ArrayList<>();

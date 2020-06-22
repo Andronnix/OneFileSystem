@@ -6,13 +6,20 @@ import java.util.Optional;
 
 public class BlockManager {
     private final int maxBlocks;
+    private final int blockSize;
     private final boolean[] occupied;
+
     private int occupiedCount = 0;
     private int lastBlock = 0;
 
-    public BlockManager(int maxBlocks) {
-        this.maxBlocks = maxBlocks;
+    public BlockManager(int blockSize, int maxBytes) {
+        this.blockSize = blockSize;
+        this.maxBlocks = maxBytes / blockSize;
         this.occupied = new boolean[maxBlocks];
+    }
+
+    public int getBlockSize() {
+        return blockSize;
     }
 
     public void freeBlock(int index) {
