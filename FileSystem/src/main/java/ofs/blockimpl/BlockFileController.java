@@ -6,7 +6,6 @@ import ofs.tree.OFSTreeNode;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
-import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.*;
@@ -35,7 +34,7 @@ public class BlockFileController implements OFSController {
             var rootHead = new BlockFileHead("", true, rootBlock.get());
             this.fileTree = new OFSTree<>(rootHead);
 
-            serializeDirectory(this.fileTree.getRoot());
+            fileSerializer.serializeDirectory(this.fileTree.getRoot());
         }
     }
 
@@ -44,12 +43,13 @@ public class BlockFileController implements OFSController {
 
         var fileTree = new OFSTree<>(root);
 
-        deserializeDirectory(fileTree.getRoot());
+        fileSerializer.deserializeDirectory(fileTree.getRoot());
 
         return fileTree;
     }
 
-    private BlockFileHead allocateHead(@NotNull String name, boolean isDirectory) throws IOException {
+    private BlockFileHead allocateFileHead(@NotNull Path path, boolean isDirectory) throws IOException {
+        var name = path.getFileName().toString();
         var headBlock = blockManager.allocateBlock();
         if(headBlock.isEmpty())
             throw new IOException("Couldn't create new file, not enough space.");
@@ -64,68 +64,14 @@ public class BlockFileController implements OFSController {
             fileHead.setByteCount(4); // One int for contents length
         }
 
+        if(!fileTree.addNode(path, fileHead)) {
+            throw new IllegalArgumentException();
+        }
+
+        fileSerializer.serializeFileHead(fileHead);
+        updateParentDirectory(path);
+
         return fileHead;
-    }
-
-    private void serializeDirectory(@NotNull OFSTreeNode<BlockFileHead> dir) throws IOException {
-        if(!dir.isDirectory()) {
-            throw new IllegalArgumentException();
-        }
-
-        var contentBuffer = serializeDirectoryChildrenList(dir);
-        var bc = new BlockFileByteChannel(dir.getFile(), fileSerializer);
-        bc.write(contentBuffer);
-
-        fileSerializer.serializeFileHead(dir.getFile());
-    }
-
-    private ByteBuffer serializeDirectoryChildrenList(OFSTreeNode<BlockFileHead> dir) {
-        if(!dir.isDirectory()) {
-            throw new IllegalArgumentException();
-        }
-
-        var children = dir.getAllChildren();
-
-        var buffer = ByteBuffer.allocate(
-                4 + // Children.size()
-                children.size() * 4 // Block address of each child
-        );
-
-        buffer.putInt(children.size());
-        for(var c : children) {
-            buffer.putInt(c.getFile().getAddress());
-        }
-
-        buffer.flip();
-
-        return buffer;
-    }
-
-    private void deserializeDirectory(OFSTreeNode<BlockFileHead> dir) throws IOException {
-        if(!dir.isDirectory()) {
-            throw new IllegalArgumentException();
-        }
-
-        var countBuffer = ByteBuffer.allocate(4);
-        var bc = new BlockFileByteChannel(dir.getFile(), fileSerializer);
-        bc.read(countBuffer);
-        countBuffer.flip();
-        var childrenCount = countBuffer.getInt();
-
-        var childrenBuffer = ByteBuffer.allocate(childrenCount * 4);
-        bc.read(childrenBuffer); childrenBuffer.flip();
-        bc.close();
-
-        for(int i = 0; i < childrenCount; i++) {
-            var childBlock = childrenBuffer.getInt();
-            var childHead = fileSerializer.deserializeFileHead(childBlock);
-
-            dir.addChild(new OFSTreeNode<>(childHead));
-        }
-
-        for(var childDir : dir.getChildDirectories()) {
-            deserializeDirectory(childDir);
-        }
     }
 
     private void updateParentDirectory(@NotNull Path child) throws IOException {
@@ -133,7 +79,7 @@ public class BlockFileController implements OFSController {
         if(parent == null)
             throw new IllegalArgumentException();
 
-        serializeDirectory(parent);
+        fileSerializer.serializeDirectory(parent);
     }
 
     @Override
@@ -151,14 +97,7 @@ public class BlockFileController implements OFSController {
 
         BlockFileHead head;
         if(node == null) {
-            head = allocateHead(path.getFileName().toString(), false);
-            if(!fileTree.addNode(path, head)) {
-                throw new IllegalArgumentException();
-            }
-
-            fileSerializer.serializeFileHead(head);
-
-            updateParentDirectory(path);
+            head = allocateFileHead(path, false);
         } else {
             head = node.getFile();
         }
@@ -239,13 +178,7 @@ public class BlockFileController implements OFSController {
         if(parent == null)
             throw new NoSuchFileException(dir.toString());
 
-        var head = allocateHead(dir.getFileName().toString(), true);
-        if(!fileTree.addNode(dir, head)) {
-            throw new IllegalArgumentException();
-        }
-
-        fileSerializer.serializeFileHead(head);
-        updateParentDirectory(dir);
+        allocateFileHead(dir, true);
     }
 
     @Override

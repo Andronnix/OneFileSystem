@@ -1,5 +1,6 @@
 package ofs.blockimpl;
 
+import ofs.tree.OFSTreeNode;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -186,6 +187,63 @@ public class BlockFileSerializer {
         }
 
         return newPosition;
+    }
+
+    public void serializeDirectory(@NotNull OFSTreeNode<BlockFileHead> dir) throws IOException {
+        if(!dir.isDirectory()) {
+            throw new IllegalArgumentException();
+        }
+
+        var contentBuffer = serializeDirectoryChildrenList(dir);
+        writeAt(contentBuffer, dir.getFile(), 0);
+
+        serializeFileHead(dir.getFile());
+    }
+
+    private ByteBuffer serializeDirectoryChildrenList(@NotNull OFSTreeNode<BlockFileHead> dir) {
+        if(!dir.isDirectory()) {
+            throw new IllegalArgumentException();
+        }
+
+        var children = dir.getAllChildren();
+
+        var buffer = ByteBuffer.allocate(
+                4 + // Children.size()
+                        children.size() * 4 // Block address of each child
+        );
+
+        buffer.putInt(children.size());
+        for(var c : children) {
+            buffer.putInt(c.getFile().getAddress());
+        }
+
+        buffer.flip();
+
+        return buffer;
+    }
+
+    void deserializeDirectory(@NotNull OFSTreeNode<BlockFileHead> dir) throws IOException {
+        if(!dir.isDirectory()) {
+            throw new IllegalArgumentException();
+        }
+
+        var countBuffer = ByteBuffer.allocate(4);
+        readAt(countBuffer, dir.getFile(), 0); countBuffer.flip();
+        var childrenCount = countBuffer.getInt();
+
+        var childrenBuffer = ByteBuffer.allocate(childrenCount * 4);
+        readAt(childrenBuffer, dir.getFile(), 4); childrenBuffer.flip();
+
+        for(int i = 0; i < childrenCount; i++) {
+            var childBlock = childrenBuffer.getInt();
+            var childHead = deserializeFileHead(childBlock);
+
+            dir.addChild(new OFSTreeNode<>(childHead));
+        }
+
+        for(var childDir : dir.getChildDirectories()) {
+            deserializeDirectory(childDir);
+        }
     }
 
     public boolean isOpen() {
