@@ -19,9 +19,11 @@ public class BlockFileController implements OFSController {
     private final SeekableByteChannel channel;
     private final BlockManager blockManager = new BlockManager(BLOCK_SIZE, MAX_SPACE);
     private final OFSTree<BlockFileHead> fileTree;
+    private final BlockFileSerializer fileSerializer;
 
     public BlockFileController(@NotNull Path baseFile, boolean shouldDeserialize) throws IOException {
         this.channel = Files.newByteChannel(baseFile, Set.of(StandardOpenOption.READ, StandardOpenOption.WRITE));
+        this.fileSerializer = new BlockFileSerializer(channel, blockManager);
 
         if(shouldDeserialize) {
             this.fileTree = deserializeTree();
@@ -38,12 +40,7 @@ public class BlockFileController implements OFSController {
     }
 
     private OFSTree<BlockFileHead> deserializeTree() throws IOException {
-        var buffer = ByteBuffer.allocate(BLOCK_SIZE);
-        channel.position(0);
-        channel.read(buffer);
-
-        buffer.flip();
-        var root = new BlockFileHead(buffer);
+        var root = fileSerializer.deserializeFile(0);
 
         var fileTree = new OFSTree<>(root);
 
@@ -76,12 +73,10 @@ public class BlockFileController implements OFSController {
         }
 
         var contentBuffer = serializeDirectoryChildrenList(dir);
-        var bc = new BlockFileByteChannel(channel, dir.getFile(), blockManager);
+        var bc = new BlockFileByteChannel(channel, dir.getFile(), fileSerializer, blockManager);
         bc.write(contentBuffer);
 
-        var headBuffer = dir.getFile().toByteBuffer();
-        channel.position(dir.getFile().getAddress() * BLOCK_SIZE);
-        channel.write(headBuffer);
+        fileSerializer.serializeFile(dir.getFile());
     }
 
     private ByteBuffer serializeDirectoryChildrenList(OFSTreeNode<BlockFileHead> dir) {
@@ -112,7 +107,7 @@ public class BlockFileController implements OFSController {
         }
 
         var countBuffer = ByteBuffer.allocate(4);
-        var bc = new BlockFileByteChannel(channel, dir.getFile(), blockManager);
+        var bc = new BlockFileByteChannel(channel, dir.getFile(), fileSerializer, blockManager);
         bc.read(countBuffer);
         countBuffer.flip();
         var childrenCount = countBuffer.getInt();
@@ -121,16 +116,11 @@ public class BlockFileController implements OFSController {
         bc.read(childrenBuffer); childrenBuffer.flip();
         bc.close();
 
-        var headBuffer = ByteBuffer.allocate(BLOCK_SIZE);
         for(int i = 0; i < childrenCount; i++) {
             var childBlock = childrenBuffer.getInt();
-            channel.position(childBlock * BLOCK_SIZE);
-            channel.read(headBuffer); headBuffer.flip();
-
-            var childHead = new BlockFileHead(headBuffer);
+            var childHead = fileSerializer.deserializeFile(childBlock);
 
             dir.addChild(new OFSTreeNode<>(childHead));
-            headBuffer.clear();
         }
 
         for(var childDir : dir.getChildDirectories()) {
@@ -166,15 +156,14 @@ public class BlockFileController implements OFSController {
                 throw new IllegalArgumentException();
             }
 
-            channel.position(head.getAddress() * BLOCK_SIZE);
-            channel.write(head.toByteBuffer());
+            fileSerializer.serializeFile(head);
 
             updateParentDirectory(path);
         } else {
             head = node.getFile();
         }
 
-        SeekableByteChannel bc = new BlockFileByteChannel(channel, head, blockManager);
+        SeekableByteChannel bc = new BlockFileByteChannel(channel, head, fileSerializer, blockManager);
         if(options.contains(StandardOpenOption.APPEND)) {
             bc = bc.position(bc.size());
         }
@@ -255,8 +244,7 @@ public class BlockFileController implements OFSController {
             throw new IllegalArgumentException();
         }
 
-        channel.position(head.getAddress() * BLOCK_SIZE);
-        channel.write(head.toByteBuffer());
+        fileSerializer.serializeFile(head);
         updateParentDirectory(dir);
     }
 

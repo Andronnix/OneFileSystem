@@ -96,7 +96,7 @@ public class BlockFileControllerTest {
         var bc = controller.newByteChannel(file, Set.of(StandardOpenOption.CREATE));
         var outputStream = Channels.newOutputStream(bc);
 
-        var largeFileSize = 200 * 1024;
+        var largeFileSize = 100 * 1024 * 1024;
         for(int i = 0; i < largeFileSize; i++) {
             outputStream.write(magicNumber);
         }
@@ -120,7 +120,7 @@ public class BlockFileControllerTest {
         var file = Path.of("file");
         var bc = controller.newByteChannel(file, Set.of(StandardOpenOption.CREATE));
 
-        var megabytes = 10 * 1024;
+        var megabytes = 10 * 1024 * 1024;
         var buffer = ByteBuffer.allocate(1024 * 1024); // 1 mb
         for(int i = 0; i < 10 * 1024; i++) {
             buffer.put(magicNumber);

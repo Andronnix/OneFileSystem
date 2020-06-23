@@ -73,4 +73,29 @@ public class BlockManagerTest {
             Assert.assertFalse(blocks.contains(b2));
         }
     }
+
+    @Test
+    public void refusesAllocatingTooMuchInBulk() {
+        var maxBlocks = 10;
+        var blockSize = 10;
+        var maxMem = blockSize * maxBlocks;
+        var mgr = new BlockManager(blockSize, maxMem);
+
+        var blocksOptional = mgr.allocateBlocks(maxBlocks + 1);
+        Assert.assertTrue(blocksOptional.isEmpty());
+    }
+
+    @Test
+    public void refusesAllocatingTooMuch() {
+        var maxBlocks = 10;
+        var blockSize = 10;
+        var maxMem = blockSize * maxBlocks;
+        var mgr = new BlockManager(blockSize, maxMem);
+
+        for(int i = 0; i < maxBlocks; i++) {
+            Assert.assertTrue(mgr.allocateBlock().isPresent());
+        }
+
+        Assert.assertTrue(mgr.allocateBlock().isEmpty());
+    }
 }

@@ -9,14 +9,16 @@ public class BlockFileByteChannel implements SeekableByteChannel {
     private final SeekableByteChannel channel;
     private final BlockFileHead fileHead;
     private final BlockManager blockManager;
+    private final BlockFileSerializer fileSerializer;
     private boolean isOpen = true;
 
     private int currentPosition = 0;
 
-    BlockFileByteChannel(SeekableByteChannel channel, BlockFileHead head, BlockManager blockManager) {
+    BlockFileByteChannel(SeekableByteChannel channel, BlockFileHead head, BlockFileSerializer fileSerializer, BlockManager blockManager) {
         this.channel = channel;
         this.fileHead = head;
         this.blockManager = blockManager;
+        this.fileSerializer = fileSerializer;
     }
 
     @Override
@@ -118,8 +120,7 @@ public class BlockFileByteChannel implements SeekableByteChannel {
 
         fileHead.setByteCount(Math.max(startingPosition + bytesWritten, fileHead.getByteCount()));
 
-        channel.position(fileHead.getAddress() * blockManager.getBlockSize());
-        channel.write(fileHead.toByteBuffer());
+        fileSerializer.serializeFile(fileHead);
 
         return bytesWritten;
     }
