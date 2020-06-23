@@ -1,6 +1,5 @@
 package ofs.blockimpl;
 
-import ofs.OFSPath;
 import ofs.controller.OFSFileHead;
 import org.jetbrains.annotations.NotNull;
 
@@ -8,7 +7,7 @@ import java.util.ArrayList;
 import java.util.Objects;
 
 public class BlockFileHead implements OFSFileHead {
-    private final int address;
+    private final ArrayList<Integer> address;
     private final String name;
     private final ArrayList<Integer> blocks;
     private final boolean isDirectory;
@@ -21,22 +20,15 @@ public class BlockFileHead implements OFSFileHead {
             result.expand(b);
         }
 
+        result.byteCount = byteCount;
+
         return result;
     }
 
-    public static int getMaxContentBlockCount(int blockSize) {
-        var spaceAvailableForBlocksList = blockSize;
-        spaceAvailableForBlocksList -= 4; // name size;
-        spaceAvailableForBlocksList -= OFSPath.MAX_NAME_LENGTH; // name length;
-        spaceAvailableForBlocksList -= 4; // self block address;
-        spaceAvailableForBlocksList -= 4; // self content byte count;
-        spaceAvailableForBlocksList -= 1; // is directory;
-        spaceAvailableForBlocksList -= 4; // blocks count;
+    BlockFileHead(@NotNull String name, @NotNull ArrayList<Integer> address, int byteCount, boolean isDirectory, @NotNull ArrayList<Integer> blocks) {
+        if(address.size() == 0)
+            throw new IllegalArgumentException();
 
-        return spaceAvailableForBlocksList / 4;
-    }
-
-    BlockFileHead(String name, int address, int byteCount, boolean isDirectory, ArrayList<Integer> blocks) {
         this.name = name;
         this.address = address;
         this.byteCount = byteCount;
@@ -44,15 +36,19 @@ public class BlockFileHead implements OFSFileHead {
         this.blocks = blocks;
     }
 
-    public BlockFileHead(String name, boolean isDirectory, int address) {
+    public BlockFileHead(@NotNull String name, boolean isDirectory, int address) {
         this.name = name;
         this.isDirectory = isDirectory;
-        this.address = address;
+        this.address = new ArrayList<>(); this.address.add(address);
         this.blocks = new ArrayList<>();
     }
 
-    public int getAddress() {
+    public ArrayList<Integer> getFullAddress() {
         return address;
+    }
+
+    public int getAddress(int index) {
+        return address.get(index);
     }
 
     public int getByteCount() {
@@ -86,10 +82,10 @@ public class BlockFileHead implements OFSFileHead {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         BlockFileHead that = (BlockFileHead) o;
-        return address == that.address &&
-                isDirectory == that.isDirectory &&
+        return  isDirectory == that.isDirectory &&
                 byteCount == that.byteCount &&
                 name.equals(that.name) &&
+                Objects.equals(address, that.address) &&
                 Objects.equals(blocks, that.blocks);
     }
 

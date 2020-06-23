@@ -55,14 +55,6 @@ public class BlockFileController implements OFSController {
             throw new IOException("Couldn't create new file, not enough space.");
 
         var fileHead = new BlockFileHead(name, isDirectory, headBlock.get());
-        if(isDirectory) {
-            var block = blockManager.allocateBlock();
-            if(block.isEmpty())
-                throw new IOException("Couldn't create new file, not enough space.");
-
-            fileHead.expand(block.get());
-            fileHead.setByteCount(4); // One int for contents length
-        }
 
         if(!fileTree.addNode(path, fileHead)) {
             throw new IllegalArgumentException();
@@ -179,6 +171,7 @@ public class BlockFileController implements OFSController {
             throw new NoSuchFileException(dir.toString());
 
         allocateFileHead(dir, true);
+        fileSerializer.serializeDirectory(fileTree.getNode(dir));
     }
 
     @Override

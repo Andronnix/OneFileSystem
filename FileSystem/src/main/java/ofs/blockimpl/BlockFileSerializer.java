@@ -1,5 +1,6 @@
 package ofs.blockimpl;
 
+import ofs.OFSPath;
 import ofs.tree.OFSTreeNode;
 import org.jetbrains.annotations.NotNull;
 
@@ -11,6 +12,7 @@ import java.util.ArrayList;
 public class BlockFileSerializer {
     private final BlockManager blockManager;
     private final SeekableByteChannel channel;
+    private final int EMPTY = -1;
 
     public BlockFileSerializer(@NotNull SeekableByteChannel channel, @NotNull BlockManager blockManager) {
         this.blockManager = blockManager;
@@ -29,30 +31,40 @@ public class BlockFileSerializer {
     }
 
     public void serializeFileHead(@NotNull BlockFileHead fileHead) throws IOException {
+        ensureHeadHasEnoughBlocks(fileHead);
+
+        var serialized = ByteBuffer.allocate(blockManager.getBlockSize());
+
         var nameBytes = fileHead.getName().getBytes();
-
-        var serialized = ByteBuffer.allocate(
-                nameBytes.length + 4 // name + it's length
-                        + 4 // address
-                        + 4 // byteCount
-                        + 1 // isDirectory
-                        + 4 // blocksSize
-                        + fileHead.getBlocks().size() * 4 // actual blocks
-        );
-
         serialized.putInt(nameBytes.length); serialized.put(nameBytes);
-        serialized.putInt(fileHead.getAddress());
+        serialized.putInt(fileHead.getFullAddress().size() == 1 ? EMPTY : fileHead.getFullAddress().get(1));
         serialized.putInt(fileHead.getByteCount());
         serialized.put((byte) (fileHead.isDirectory() ? 1 : 0));
-        serialized.putInt(fileHead.getBlocks().size());
-        for(var block : fileHead.getBlocks()) {
-            serialized.putInt(block);
+
+        var blocks = fileHead.getBlocks();
+        serialized.putInt(blocks.size());
+        int block = 0;
+        while(block < blocks.size() && serialized.remaining() >= 4) {
+            serialized.putInt(blocks.get(block));
+            block++;
         }
 
-        serialized.flip();
-
-        seekBlock(fileHead.getAddress());
+        seekBlock(fileHead.getAddress(0)); serialized.flip();
         channel.write(serialized);
+
+        int currentHeadBlock = 1;
+        while(block < blocks.size()) {
+            serialized.clear();
+            var lastBlock = currentHeadBlock + 1 == fileHead.getFullAddress().size();
+            serialized.putInt(lastBlock ? EMPTY : fileHead.getAddress(currentHeadBlock + 1));
+            while(block < blocks.size() && serialized.remaining() > 4) {
+                serialized.putInt(blocks.get(block));
+                block++;
+            }
+
+            seekBlock(fileHead.getFullAddress().get(currentHeadBlock));
+            channel.write(serialized);
+        }
     }
 
     public BlockFileHead deserializeFileHead(int block) throws IOException {
@@ -67,17 +79,64 @@ public class BlockFileSerializer {
 
         in.get(nameBytes);
         var name = new String(nameBytes);
-        var address = in.getInt();
+        var address = new ArrayList<Integer>(); address.add(block);
+        var nextAddress = in.getInt();
         var byteCount = in.getInt();
         var isDirectory = in.get() > 0;
 
         var blockCount = in.getInt();
-        var blocks = new ArrayList<Integer>(blockCount);
-        for(int i = 0; i < blockCount; i++) {
+        var blocks = new ArrayList<Integer>();
+
+        while(in.remaining() >= 4 && blocks.size() < blockCount) {
             blocks.add(in.getInt());
         }
 
+        while(blocks.size() < blockCount) {
+            in.clear();
+            if(nextAddress == EMPTY)
+                throw new IllegalArgumentException("Wrong format, not enough header blocks");
+            address.add(nextAddress);
+
+            seekBlock(nextAddress);
+            channel.read(in); in.flip();
+
+            nextAddress = in.getInt();
+            while(blocks.size() < blockCount && in.remaining() >= 4) {
+                blocks.add(in.getInt());
+            }
+        }
+
         return new BlockFileHead(name, address, byteCount, isDirectory, blocks);
+    }
+
+    private void ensureHeadHasEnoughBlocks(@NotNull BlockFileHead file) throws IOException {
+        var headerSize =
+                4 + //name length
+                OFSPath.MAX_NAME_LENGTH + // nameBytes
+                4 + // next Address
+                4 + // content byte count
+                1 + // isDirectory
+                4 + // content blocks count
+                4 * file.getBlocks().size(); // content blocks themselves
+
+        var blockSize = blockManager.getBlockSize();
+
+        if(headerSize <= blockSize)
+            return;
+
+        var additionalBlocks = (int) Math.ceil((headerSize - blockSize) / (1.0 * blockSize - 4.0));
+
+        var fullAddress = file.getFullAddress();
+        while(fullAddress.size() > additionalBlocks) {
+            var last = fullAddress.remove(fullAddress.size() - 1);
+            blockManager.freeBlock(last);
+        }
+
+        var tail = blockManager.allocateBlocks(additionalBlocks - (fullAddress.size() - 1));
+        if(tail.isEmpty())
+            throw new IOException("Couldn't allocate file header. Not enough space");
+
+        fullAddress.addAll(tail.get());
     }
 
     private void ensureFileHasEnoughBlocks(@NotNull BlockFileHead file, int requiredCapacity) throws IOException {
@@ -85,10 +144,6 @@ public class BlockFileSerializer {
         var blocksToAllocate = neededBlocks - file.getBlocks().size();
         if(blocksToAllocate <= 0)
             return;
-
-        if(neededBlocks > BlockFileHead.getMaxContentBlockCount(blockManager.getBlockSize())) {
-            throw new IOException("File is too large.");
-        }
 
         var blocks = blockManager.allocateBlocks(blocksToAllocate);
         if(blocks.isEmpty()) {
@@ -194,8 +249,8 @@ public class BlockFileSerializer {
             throw new IllegalArgumentException();
         }
 
-        var contentBuffer = serializeDirectoryChildrenList(dir);
-        writeAt(contentBuffer, dir.getFile(), 0);
+        var children = serializeDirectoryChildrenList(dir);
+        writeAt(children, dir.getFile(), 0);
 
         serializeFileHead(dir.getFile());
     }
@@ -209,12 +264,12 @@ public class BlockFileSerializer {
 
         var buffer = ByteBuffer.allocate(
                 4 + // Children.size()
-                        children.size() * 4 // Block address of each child
+                children.size() * 4 // Block address of each child
         );
 
         buffer.putInt(children.size());
         for(var c : children) {
-            buffer.putInt(c.getFile().getAddress());
+            buffer.putInt(c.getFile().getAddress(0));
         }
 
         buffer.flip();

@@ -91,27 +91,34 @@ public class BlockFileControllerTest {
 
     @Test
     public void writesLongFiles() throws IOException {
-        var magicNumber = 7;
+        byte magicNumber = 7;
         var file = Path.of("file");
         var bc = controller.newByteChannel(file, Set.of(StandardOpenOption.CREATE));
-        var outputStream = Channels.newOutputStream(bc);
 
-        var largeFileSize = 100 * 1024 * 1024;
-        for(int i = 0; i < largeFileSize; i++) {
-            outputStream.write(magicNumber);
+        var megabyte = 1024 * 1024;
+        var fileSize = 100;
+        var buffer = ByteBuffer.allocate(megabyte);
+        var expect = ByteBuffer.allocate(megabyte);
+        for(int i = 0; i < megabyte; i++) {
+            buffer.put(magicNumber);
+            expect.put(magicNumber);
         }
-        outputStream.close();
+        expect.flip();
+
+        for(int i = 0; i < fileSize; i++) {
+            buffer.flip();
+            bc.write(buffer);
+        }
         bc.close();
 
         var copyBc = controller.newByteChannel(file, Set.of(StandardOpenOption.READ));
-        var inputStream = Channels.newInputStream(copyBc);
 
-        for(int i = 0; i < largeFileSize; i++) { //1 megabyte
-            Assert.assertEquals(magicNumber, inputStream.read());
+        buffer.clear();
+        for(int i = 0; i < fileSize; i++) {
+            copyBc.read(buffer); buffer.flip();
+
+            Assert.assertEquals(expect, buffer);
         }
-        Assert.assertEquals(0, inputStream.available());
-
-        inputStream.close();
     }
 
     @Test(expected = IOException.class)
@@ -120,13 +127,14 @@ public class BlockFileControllerTest {
         var file = Path.of("file");
         var bc = controller.newByteChannel(file, Set.of(StandardOpenOption.CREATE));
 
-        var megabytes = 10 * 1024 * 1024;
-        var buffer = ByteBuffer.allocate(1024 * 1024); // 1 mb
-        for(int i = 0; i < 10 * 1024; i++) {
+        var megabyte = 1024 * 1024;
+        var buffer = ByteBuffer.allocate(megabyte);
+
+        for(int i = 0; i < megabyte; i++) {
             buffer.put(magicNumber);
         }
 
-        for(int i = 0; i < megabytes; i++) {
+        for(int i = 0; i < 2048; i++) {
             buffer.flip();
             bc.write(buffer);
         }
