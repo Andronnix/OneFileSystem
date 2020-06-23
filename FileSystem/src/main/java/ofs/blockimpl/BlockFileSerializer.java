@@ -1,5 +1,7 @@
 package ofs.blockimpl;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
@@ -9,7 +11,7 @@ public class BlockFileSerializer {
     private final BlockManager blockManager;
     private final SeekableByteChannel channel;
 
-    public BlockFileSerializer(SeekableByteChannel channel, BlockManager blockManager) {
+    public BlockFileSerializer(@NotNull SeekableByteChannel channel, @NotNull BlockManager blockManager) {
         this.blockManager = blockManager;
         this.channel = channel;
     }
@@ -18,7 +20,14 @@ public class BlockFileSerializer {
         channel.position(blockManager.getBlockSize() * block);
     }
 
-    public void serializeFile(BlockFileHead fileHead) throws IOException {
+    private void seekPositionInFile(@NotNull BlockFileHead fileHead, int position) throws IOException {
+        var offset = position % blockManager.getBlockSize();
+        var currentBlock = position / blockManager.getBlockSize();
+
+        channel.position(fileHead.getBlocks().get(currentBlock) * blockManager.getBlockSize() + offset);
+    }
+
+    public void serializeFileHead(@NotNull BlockFileHead fileHead) throws IOException {
         var nameBytes = fileHead.getName().getBytes();
 
         var serialized = ByteBuffer.allocate(
@@ -45,7 +54,7 @@ public class BlockFileSerializer {
         channel.write(serialized);
     }
 
-    public BlockFileHead deserializeFile(int block) throws IOException {
+    public BlockFileHead deserializeFileHead(int block) throws IOException {
         seekBlock(block);
 
         var in = ByteBuffer.allocate(blockManager.getBlockSize());
@@ -68,5 +77,118 @@ public class BlockFileSerializer {
         }
 
         return new BlockFileHead(name, address, byteCount, isDirectory, blocks);
+    }
+
+    private void ensureFileHasEnoughBlocks(@NotNull BlockFileHead file, int requiredCapacity) throws IOException {
+        var neededBlocks = (int) Math.ceil(requiredCapacity / (1.0 * blockManager.getBlockSize()));
+        var blocksToAllocate = neededBlocks - file.getBlocks().size();
+        if(blocksToAllocate <= 0)
+            return;
+
+        if(neededBlocks > BlockFileHead.getMaxContentBlockCount(blockManager.getBlockSize())) {
+            throw new IOException("File is too large.");
+        }
+
+        var blocks = blockManager.allocateBlocks(blocksToAllocate);
+        if(blocks.isEmpty()) {
+            throw new IOException("Couldn't allocate enough space.");
+        }
+
+        for(var block : blocks.get()) {
+            file.expand(block);
+        }
+    }
+
+    public int writeAt(@NotNull ByteBuffer src, @NotNull BlockFileHead file, int positionInFile) throws IOException {
+        var bytesWritten = 0;
+        var startingPosition = positionInFile;
+
+        ensureFileHasEnoughBlocks(file, positionInFile + src.remaining());
+
+        ByteBuffer buffer = ByteBuffer.allocate(blockManager.getBlockSize());
+        while(src.hasRemaining()) {
+            var remainingBytesInCurrentBLock = blockManager.getBlockSize() - positionInFile % blockManager.getBlockSize();
+
+            seekPositionInFile(file, positionInFile);
+
+            var bytesToWrite = Math.min(src.remaining(), remainingBytesInCurrentBLock);
+            for(int i = 0; i < bytesToWrite; i++) {
+                buffer.put(src.get());
+            }
+            buffer.flip();
+            channel.write(buffer);
+
+            positionInFile += bytesToWrite;
+            bytesWritten += bytesToWrite;
+
+            buffer.clear();
+        }
+
+        file.setByteCount(Math.max(startingPosition + bytesWritten, file.getByteCount()));
+
+        serializeFileHead(file);
+
+        return bytesWritten;
+    }
+
+    public int readAt(@NotNull ByteBuffer dst, @NotNull BlockFileHead file, int positionInFile) throws IOException {
+        var fileSize = file.getByteCount();
+        if(positionInFile >= fileSize)
+            return -1;
+
+        int count = 0;
+        ByteBuffer block = ByteBuffer.allocate(blockManager.getBlockSize());
+        while(dst.hasRemaining() && positionInFile < fileSize) {
+            int offset = positionInFile % blockManager.getBlockSize();
+            int currentBlock = positionInFile / blockManager.getBlockSize();
+            int blockBeginPosition = file.getBlocks().get(currentBlock) * blockManager.getBlockSize();
+            channel.position(blockBeginPosition);
+
+            int readBytes = channel.read(block) - offset;
+            block.flip();
+            block.position(offset);
+
+            if(dst.remaining() >= readBytes && positionInFile + readBytes < fileSize) {
+                dst.put(block);
+
+                count += readBytes;
+                positionInFile += readBytes;
+            } else {
+                while(dst.hasRemaining() && positionInFile < fileSize) {
+                    dst.put(block.get());
+                    count++;
+                    positionInFile++;
+                }
+            }
+
+            block.clear();
+        }
+
+        return count;
+    }
+
+    public int truncate(@NotNull BlockFileHead file, int currentPosition, int desiredSize) {
+        if(desiredSize < 0)
+            throw new IllegalArgumentException("Size must be positive.");
+
+        var newNeededBlocks = (int) Math.ceil(desiredSize / (1.0 * blockManager.getBlockSize()));
+        var oldBlocksCount = file.getBlocks().size();
+
+        var newPosition = Math.min(currentPosition, desiredSize);
+        if(newNeededBlocks < oldBlocksCount) {
+            var fileBlocks = file.getBlocks();
+            for (int i = oldBlocksCount - 1; i >= newNeededBlocks; i--) {
+                var last = fileBlocks.get(i);
+                blockManager.freeBlock(last);
+
+                fileBlocks.remove(i);
+            }
+        }
+
+        return newPosition;
+    }
+
+    public boolean isOpen() {
+        return channel.isOpen();
     }
 }

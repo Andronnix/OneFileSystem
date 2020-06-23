@@ -7,7 +7,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.nio.channels.Channel;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 
@@ -25,8 +24,8 @@ public class BlockFileSerializerTest {
         }
         head.setByteCount(99);
 
-        serializer.serializeFile(head);
-        var deserialized = serializer.deserializeFile(0);
+        serializer.serializeFileHead(head);
+        var deserialized = serializer.deserializeFileHead(0);
 
         Assert.assertEquals(head, deserialized);
     }
