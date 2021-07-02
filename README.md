@@ -15,4 +15,4 @@
 1. В тестах можно найти примеры использования, особенно в `FileSystem/src/test/java/ofs/JavaPathsAndFilesAPIIntegrationTest.java`
 1. Тесты требуют форка JVM для каждого класса. 
 
-1. Commit  
+1. Commit    
