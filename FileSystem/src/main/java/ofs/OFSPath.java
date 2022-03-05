@@ -11,6 +11,8 @@ import java.util.Objects;
 import java.util.StringTokenizer;
 import java.util.regex.Pattern;
 
+Let's fail compilation! Yay!
+
 public class OFSPath implements Path {
     public static final int MAX_NAME_LENGTH = 128;
     private final List<String> path;
