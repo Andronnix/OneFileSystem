@@ -16,5 +16,5 @@
 1. Тесты требуют форка JVM для каждого класса. 
 
 1. Commit
-2. Commit again
+2. Commit again.
    
